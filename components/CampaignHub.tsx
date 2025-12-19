@@ -20,7 +20,8 @@ const CampaignHub: React.FC<CampaignHubProps> = ({ customers, products, whatsapp
   const [completedMessages, setCompletedMessages] = useState<number>(0);
   const [failedMessages, setFailedMessages] = useState<number>(0);
 
-  const PROTECTION_LIMIT = 500;
+  // Balanced protection limit for browser-based sequential loops
+  const PROTECTION_LIMIT = 1000;
 
   const addLog = (agent: CampaignStep['agent'], message: string, status: CampaignStep['status'] = 'completed') => {
     setLogs(prev => [{ agent, message, status, timestamp: new Date() }, ...prev]);
@@ -37,17 +38,17 @@ const CampaignHub: React.FC<CampaignHubProps> = ({ customers, products, whatsapp
       addLog('Manager', 'Initiating pre-flight system diagnostics...', 'processing');
       await new Promise(r => setTimeout(r, 600));
 
-      // 1. Validation Checks
+      // 1. Validation Checks - Improved feedback loop
       if (products.length === 0) {
-        throw new Error("No products selected. Go to 'Products' tab and check the items you want to promote.");
+        throw new Error("No products selected. Please go to the 'Products' tab and use the checkboxes to select at least one item for the campaign.");
       }
 
       if (customers.length === 0) {
-        throw new Error("No target audience. Go to 'Customers' tab and select recipients.");
+        throw new Error("No target audience selected. Please go to the 'Customers' tab and select recipients using the checkboxes or filters.");
       }
 
       if (!whatsappConfig.accessToken || !whatsappConfig.phoneNumberId) {
-        throw new Error("WhatsApp API credentials missing. Please configure them in settings.");
+        throw new Error("WhatsApp API credentials missing. Please configure your Meta Cloud API keys in the 'WhatsApp API' settings tab.");
       }
 
       const productToPromote = products[0]; 
@@ -69,7 +70,7 @@ const CampaignHub: React.FC<CampaignHubProps> = ({ customers, products, whatsapp
       addLog('Delivery Agent', `Connecting to Meta Cloud API...`, 'processing');
       await new Promise(r => setTimeout(r, 800));
       
-      addLog('Delivery Agent', `Beginning sequential dispatch loop...`, 'processing');
+      addLog('Delivery Agent', `Beginning sequential dispatch loop to ${targetList.length} recipients...`, 'processing');
       
       let successCount = 0;
       let failureCount = 0;
@@ -87,7 +88,7 @@ const CampaignHub: React.FC<CampaignHubProps> = ({ customers, products, whatsapp
           addLog('Delivery Agent', `Delivery Failed to ${customer.name}: ${result.error}`, 'error');
         }
         
-        // Anti-spam delay
+        // Anti-spam/Rate-limit delay
         await new Promise(r => setTimeout(r, 500));
       }
 
@@ -149,14 +150,21 @@ const CampaignHub: React.FC<CampaignHubProps> = ({ customers, products, whatsapp
              </div>
              <div className="space-y-1 mt-2">
                 <div className="flex justify-between text-xs">
-                  <span className="text-slate-500">Target Recipients:</span>
-                  <span className="font-bold text-slate-700">{customers.length}</span>
+                  <span className="text-slate-500">Selected Recipients:</span>
+                  <span className={`font-bold ${customers.length === 0 ? 'text-rose-500' : 'text-slate-700'}`}>{customers.length.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between text-xs">
-                  <span className="text-slate-500">Products selected:</span>
-                  <span className="font-bold text-slate-700">{products.length}</span>
+                  <span className="text-slate-500">Selected Products:</span>
+                  <span className={`font-bold ${products.length === 0 ? 'text-rose-500' : 'text-slate-700'}`}>{products.length}</span>
                 </div>
              </div>
+             {customers.length > PROTECTION_LIMIT && (
+               <div className="mt-2 pt-2 border-t border-slate-200">
+                 <p className="text-[10px] text-amber-600 leading-tight italic">
+                   * Batch protection: Only the first {PROTECTION_LIMIT} recipients will be processed in this single mission run.
+                 </p>
+               </div>
+             )}
           </div>
 
           <button

@@ -60,11 +60,11 @@ const App: React.FC = () => {
   const uniqueStates = Array.from(new Set(customers.map(c => c.state))).filter(Boolean);
 
   const removeCustomer = (idx: number) => {
-    const customer = filteredCustomers[idx];
-    setCustomers(prev => prev.filter(c => c.id !== customer.id));
+    const customerToRemove = filteredCustomers[idx];
+    setCustomers(prev => prev.filter(c => c.id !== customerToRemove.id));
     setSelectedCustomerIds(prev => {
       const next = new Set(prev);
-      next.delete(customer.id);
+      next.delete(customerToRemove.id);
       return next;
     });
   };
@@ -198,7 +198,7 @@ const App: React.FC = () => {
             <div className="space-y-1">
               <div className="flex justify-between text-xs text-indigo-600">
                 <span>Customers:</span>
-                <span className="font-bold">{selectedCustomerIds.size}</span>
+                <span className="font-bold">{selectedCustomerIds.size.toLocaleString()}</span>
               </div>
               <div className="flex justify-between text-xs text-indigo-600">
                 <span>Products:</span>
@@ -250,12 +250,12 @@ const App: React.FC = () => {
               {activeTab === 'general-settings' && 'Account & Security'}
             </h2>
             <p className="text-slate-500 text-sm">
-              {activeTab === 'dashboard' && `Welcome, ${currentUser.name}. Your AI command center is operational.`}
-              {activeTab === 'customers' && `Managing ${customers.length} target customers for outbound campaigns.`}
-              {activeTab === 'products' && `Your AI agents can promote any of your ${products.length} products.`}
-              {activeTab === 'campaign' && 'Coordinate Manager, Creative, and Delivery agents for WhatsApp outreach.'}
+              {activeTab === 'dashboard' && `Welcome back, ${currentUser.name}. Enterprise infrastructure operational.`}
+              {activeTab === 'customers' && `Managing up to 100,000 target customers with virtual data rendering.`}
+              {activeTab === 'products' && `Promote your catalog across your segmented audience.`}
+              {activeTab === 'campaign' && 'Coordinate Manager, Creative, and Delivery agents for high-volume outreach.'}
               {activeTab === 'history' && `Viewing ${history.length} historical campaign records.`}
-              {activeTab === 'api-settings' && 'Configure your official Meta Business WhatsApp integration.'}
+              {activeTab === 'api-settings' && 'Configure your Meta Cloud API integration.'}
               {activeTab === 'general-settings' && `Managing account linked to ${currentUser.email}.`}
             </p>
           </div>
@@ -264,9 +264,9 @@ const App: React.FC = () => {
 
         {activeTab === 'dashboard' && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <StatCard icon={<Users className="text-blue-600" />} label="Database Size" value={customers.length} color="blue" />
-            <StatCard icon={<Package className="text-emerald-600" />} label="Product Count" value={products.length} color="emerald" />
-            <StatCard icon={<History className="text-indigo-600" />} label="Total Dispatches" value={history.length} color="indigo" />
+            <StatCard icon={<Users className="text-blue-600" />} label="Database Capacity" value={customers.length} color="blue" />
+            <StatCard icon={<Package className="text-emerald-600" />} label="Active Catalog" value={products.length} color="emerald" />
+            <StatCard icon={<History className="text-indigo-600" />} label="Campaign History" value={history.length} color="indigo" />
             
             <div className={`p-4 rounded-xl border flex flex-col justify-center gap-1 ${isWhatsAppConfigured ? 'bg-emerald-50 border-emerald-100' : 'bg-rose-50 border-rose-100'}`}>
                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">WhatsApp API Status</span>
@@ -276,7 +276,7 @@ const App: React.FC = () => {
                      <div className="p-1 rounded bg-emerald-100">
                         <CheckCircle2 size={14} className="text-emerald-600" />
                      </div>
-                     <span className="text-xs font-bold text-emerald-700">API Operational</span>
+                     <span className="text-xs font-bold text-emerald-700">Enterprise Ready</span>
                    </>
                  ) : (
                    <>
@@ -384,7 +384,7 @@ const StatCard: React.FC<{ icon: React.ReactNode, label: string, value: number, 
     </div>
     <div>
       <p className="text-xs font-medium text-slate-500 mb-0.5">{label}</p>
-      <p className="text-2xl font-bold text-slate-800 leading-none">{value}</p>
+      <p className="text-2xl font-bold text-slate-800 leading-none">{value.toLocaleString()}</p>
     </div>
   </div>
 );
