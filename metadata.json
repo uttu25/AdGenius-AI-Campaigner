@@ -1,0 +1,5 @@
+{
+  "name": "AdGenius AI Campaigner",
+  "description": "An AI-powered multi-agent system to generate and dispatch high-conversion WhatsApp advertisements based on customer and product templates.",
+  "requestFramePermissions": []
+}
