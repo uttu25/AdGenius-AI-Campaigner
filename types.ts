@@ -48,13 +48,12 @@ export interface CampaignRecord {
   failureCount: number;
   adCopy: string;
   imageUrl?: string;
-  channel: 'WhatsApp' | 'Multi-Channel';
+  channel: 'WhatsApp';
 }
 
 export interface User {
   email: string;
   name: string;
   isLoggedIn: boolean;
-  isGmailIntegrated: boolean;
-  googleAccessToken?: string;
+  isGoogleLinked: boolean;
 }

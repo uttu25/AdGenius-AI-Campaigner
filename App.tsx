@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { LayoutDashboard, Users, Package, Settings, MessageSquarePlus, Megaphone, History, User, X } from 'lucide-react';
+import { LayoutDashboard, Users, Package, Settings, MessageSquarePlus, Megaphone, History, User, X, CheckCircle2, AlertCircle, ShieldCheck } from 'lucide-react';
 import { Customer, Product, FilterOptions, WhatsAppConfig, CampaignRecord, User as UserType } from './types';
 import TemplateButtons from './components/TemplateButtons';
 import CSVImport from './components/CSVImport';
@@ -128,12 +128,12 @@ const App: React.FC = () => {
     setSelectedProductIds(new Set());
   };
 
-  const handleLogin = (email: string, integrated: boolean) => {
+  const handleLogin = (email: string) => {
     setCurrentUser({
       email,
       name: email.split('@')[0],
       isLoggedIn: true,
-      isGmailIntegrated: integrated
+      isGoogleLinked: true
     });
     setActiveTab('dashboard');
   };
@@ -161,6 +161,8 @@ const App: React.FC = () => {
       setWhatsappConfig(prev => ({ ...prev, businessAccountId: '' }));
     }
   };
+
+  const isWhatsAppConfigured = !!(whatsappConfig.accessToken && whatsappConfig.phoneNumberId);
 
   if (!currentUser) {
     return <AuthPage onLogin={handleLogin} />;
@@ -215,13 +217,20 @@ const App: React.FC = () => {
         <div className="pt-6 border-t border-slate-100 space-y-1">
            <NavItem icon={<Settings size={20} />} label="WhatsApp API" active={activeTab === 'api-settings'} onClick={() => setActiveTab('api-settings')} />
            <NavItem icon={<User size={20} />} label="Account Settings" active={activeTab === 'general-settings'} onClick={() => setActiveTab('general-settings')} />
-           <div className="px-4 py-4 mt-4 bg-indigo-600 rounded-2xl flex items-center gap-3 shadow-lg shadow-indigo-100 border border-indigo-500">
-             <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-indigo-600 text-xs font-bold">
+           
+           <div className="px-4 py-4 mt-4 bg-indigo-600 rounded-2xl flex items-center gap-3 shadow-lg shadow-indigo-100 border border-indigo-500 relative overflow-hidden group">
+             <div className="absolute top-0 right-0 p-1 opacity-20">
+               <ShieldCheck size={40} />
+             </div>
+             <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-indigo-600 text-xs font-bold shrink-0">
                {currentUser.email.charAt(0).toUpperCase()}
              </div>
-             <div className="overflow-hidden">
-               <p className="text-[10px] font-bold text-indigo-200 uppercase tracking-widest">Active Profile</p>
-               <p className="text-xs font-bold text-white truncate">{currentUser.email}</p>
+             <div className="overflow-hidden z-10">
+               <div className="flex items-center gap-1">
+                 <p className="text-[9px] font-bold text-indigo-200 uppercase tracking-widest">Google Linked</p>
+                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></div>
+               </div>
+               <p className="text-xs font-bold text-white truncate max-w-[140px]">{currentUser.email}</p>
              </div>
            </div>
         </div>
@@ -241,13 +250,13 @@ const App: React.FC = () => {
               {activeTab === 'general-settings' && 'Account & Security'}
             </h2>
             <p className="text-slate-500 text-sm">
-              {activeTab === 'dashboard' && `Hello ${currentUser.name}. Your agents are ready.`}
-              {activeTab === 'customers' && `Managing ${customers.length} target customers.`}
-              {activeTab === 'products' && `Ready to promote ${products.length} products.`}
-              {activeTab === 'campaign' && 'Coordinate Manager, Creative, and Delivery agents.'}
-              {activeTab === 'history' && `${history.length} campaigns logged in system.`}
-              {activeTab === 'api-settings' && 'Official Meta Business integration status.'}
-              {activeTab === 'general-settings' && 'Manage your Google integration and privacy.'}
+              {activeTab === 'dashboard' && `Welcome, ${currentUser.name}. Your AI command center is operational.`}
+              {activeTab === 'customers' && `Managing ${customers.length} target customers for outbound campaigns.`}
+              {activeTab === 'products' && `Your AI agents can promote any of your ${products.length} products.`}
+              {activeTab === 'campaign' && 'Coordinate Manager, Creative, and Delivery agents for WhatsApp outreach.'}
+              {activeTab === 'history' && `Viewing ${history.length} historical campaign records.`}
+              {activeTab === 'api-settings' && 'Configure your official Meta Business WhatsApp integration.'}
+              {activeTab === 'general-settings' && `Managing account linked to ${currentUser.email}.`}
             </p>
           </div>
           <TemplateButtons />
@@ -255,16 +264,31 @@ const App: React.FC = () => {
 
         {activeTab === 'dashboard' && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <StatCard icon={<Users className="text-blue-600" />} label="Customers" value={customers.length} color="blue" />
-            <StatCard icon={<Package className="text-emerald-600" />} label="Products" value={products.length} color="emerald" />
-            <StatCard icon={<History className="text-indigo-600" />} label="Total Campaigns" value={history.length} color="indigo" />
-            <div className={`p-4 rounded-xl border flex flex-col justify-center gap-1 ${currentUser.isGmailIntegrated ? 'bg-blue-50 border-blue-100' : 'bg-slate-100 border-slate-200'}`}>
-               <span className="text-[10px] font-bold text-slate-400 uppercase">Gmail Status</span>
+            <StatCard icon={<Users className="text-blue-600" />} label="Database Size" value={customers.length} color="blue" />
+            <StatCard icon={<Package className="text-emerald-600" />} label="Product Count" value={products.length} color="emerald" />
+            <StatCard icon={<History className="text-indigo-600" />} label="Total Dispatches" value={history.length} color="indigo" />
+            
+            <div className={`p-4 rounded-xl border flex flex-col justify-center gap-1 ${isWhatsAppConfigured ? 'bg-emerald-50 border-emerald-100' : 'bg-rose-50 border-rose-100'}`}>
+               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">WhatsApp API Status</span>
                <div className="flex items-center gap-2">
-                 <div className={`w-2 h-2 rounded-full ${currentUser.isGmailIntegrated ? 'bg-blue-500' : 'bg-slate-400'}`}></div>
-                 <span className="text-xs font-bold text-slate-700">{currentUser.isGmailIntegrated ? 'API Integrated' : 'Not Connected'}</span>
+                 {isWhatsAppConfigured ? (
+                   <>
+                     <div className="p-1 rounded bg-emerald-100">
+                        <CheckCircle2 size={14} className="text-emerald-600" />
+                     </div>
+                     <span className="text-xs font-bold text-emerald-700">API Operational</span>
+                   </>
+                 ) : (
+                   <>
+                     <div className="p-1 rounded bg-rose-100">
+                        <AlertCircle size={14} className="text-rose-600" />
+                     </div>
+                     <span className="text-xs font-bold text-rose-700">Action Required</span>
+                   </>
+                 )}
                </div>
             </div>
+
             <div className="col-span-1 md:col-span-2 lg:col-span-4 mt-4">
               <CSVImport 
                 onCustomerImport={(data) => setCustomers(prev => [...prev, ...data])} 

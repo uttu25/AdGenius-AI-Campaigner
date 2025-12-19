@@ -20,110 +20,95 @@ const CampaignHub: React.FC<CampaignHubProps> = ({ customers, products, whatsapp
   const [completedMessages, setCompletedMessages] = useState<number>(0);
   const [failedMessages, setFailedMessages] = useState<number>(0);
 
-  const PROTECTION_LIMIT = 300;
+  const PROTECTION_LIMIT = 500;
 
   const addLog = (agent: CampaignStep['agent'], message: string, status: CampaignStep['status'] = 'completed') => {
     setLogs(prev => [{ agent, message, status, timestamp: new Date() }, ...prev]);
   };
 
   const startCampaign = async () => {
-    // Clear previous logs
+    // Reset state for new run
     setLogs([]);
     setCompletedMessages(0);
     setFailedMessages(0);
-
-    // Initial Manager Validation
-    if (products.length === 0) {
-      addLog('Manager', 'ABORTED: No products selected. Please go to the "Products" tab and use the checkboxes to select at least one item.', 'error');
-      return;
-    }
-
-    if (customers.length === 0) {
-      addLog('Manager', 'ABORTED: No customers selected. Please go to the "Customers" tab and use the checkboxes or filters to select target recipients.', 'error');
-      return;
-    }
-
-    if (!whatsappConfig.accessToken || !whatsappConfig.phoneNumberId) {
-      addLog('Manager', 'ABORTED: WhatsApp API credentials missing. Please configure them in "WhatsApp API" settings.', 'error');
-      return;
-    }
-
-    // Protection Logic
-    const targetCustomers = customers.slice(0, PROTECTION_LIMIT);
-    const isTruncated = customers.length > PROTECTION_LIMIT;
-
-    if (isTruncated && !confirm(`Account Protection: You have ${customers.length} selected customers. To maintain account health, this batch is capped at ${PROTECTION_LIMIT}. Proceed?`)) {
-      addLog('Manager', 'Operation cancelled by user due to protection limit.', 'error');
-      return;
-    }
-
     setIsCampaignRunning(true);
-    const productToPromote = products[0]; 
-    setActiveProduct(productToPromote);
 
     try {
-      addLog('Manager', `Orchestration started. Product: ${productToPromote.name}. Target Count: ${targetCustomers.length}.`, 'processing');
-      await new Promise(r => setTimeout(r, 800));
+      addLog('Manager', 'Initiating pre-flight system diagnostics...', 'processing');
+      await new Promise(r => setTimeout(r, 600));
 
-      addLog('Creative Agent', `Accessing Gemini 3 Flash. Generating ad copy for ${productToPromote.name}...`, 'processing');
-      const adCopy = await generateAdCopy(productToPromote);
-      
-      addLog('Creative Agent', `Rendering visual assets with Gemini Flash Image...`, 'processing');
-      const adImage = await generateProductImage(productToPromote);
-      
-      const updatedProduct = { ...productToPromote, ad_copy: adCopy, image_url: adImage };
-      setActiveProduct(updatedProduct);
-
-      addLog('Creative Agent', `Creative pack finalized. Transferring to Delivery Agent.`);
-      await new Promise(r => setTimeout(r, 1000));
-
-      addLog('Delivery Agent', `Establishing secure connection to WhatsApp Cloud API...`, 'processing');
-      await new Promise(r => setTimeout(r, 800));
-
-      addLog('Delivery Agent', `Beginning sequential dispatch to ${targetCustomers.length} mobile numbers.`, 'processing');
-      
-      let localSuccess = 0;
-      let localFailed = 0;
-
-      for (let i = 0; i < targetCustomers.length; i++) {
-        const customer = targetCustomers[i];
-        const personalizedMsg = await personalizeMessage(adCopy, customer);
-        
-        const result = await sendWhatsAppMessage(whatsappConfig, customer.mobile_number, personalizedMsg);
-
-        if (result.success) {
-          localSuccess++;
-          setCompletedMessages(localSuccess);
-        } else {
-          localFailed++;
-          setFailedMessages(localFailed);
-          addLog('Delivery Agent', `Failed [${customer.name}]: ${result.error}`, 'error');
-        }
-        
-        // Artificial delay to prevent API rate limiting
-        await new Promise(r => setTimeout(r, 400));
+      // 1. Validation Checks
+      if (products.length === 0) {
+        throw new Error("No products selected. Go to 'Products' tab and check the items you want to promote.");
       }
 
-      addLog('Delivery Agent', `Dispatch cycle complete. Successfully delivered ${localSuccess} messages.`);
-      await new Promise(r => setTimeout(r, 500));
+      if (customers.length === 0) {
+        throw new Error("No target audience. Go to 'Customers' tab and select recipients.");
+      }
 
-      addLog('Manager', `Campaign operational cycle finished. Logging results.`, 'completed');
+      if (!whatsappConfig.accessToken || !whatsappConfig.phoneNumberId) {
+        throw new Error("WhatsApp API credentials missing. Please configure them in settings.");
+      }
+
+      const productToPromote = products[0]; 
+      const targetList = customers.slice(0, PROTECTION_LIMIT);
+
+      addLog('Manager', `Orchestration verified. Target: ${targetList.length} customers. Product: ${productToPromote.name}.`, 'completed');
+
+      // 2. Creative Phase
+      addLog('Creative Agent', `Consulting Gemini 3 Flash for ad copy generation...`, 'processing');
+      const adCopy = await generateAdCopy(productToPromote);
+      addLog('Creative Agent', 'Copywriting complete. Visualizing product assets...', 'processing');
+      
+      const adImage = await generateProductImage(productToPromote);
+      const readyProduct = { ...productToPromote, ad_copy: adCopy, image_url: adImage };
+      setActiveProduct(readyProduct);
+      addLog('Creative Agent', 'Creative assets finalized and optimized for WhatsApp mobile.', 'completed');
+
+      // 3. Delivery Phase
+      addLog('Delivery Agent', `Connecting to Meta Cloud API...`, 'processing');
+      await new Promise(r => setTimeout(r, 800));
+      
+      addLog('Delivery Agent', `Beginning sequential dispatch loop...`, 'processing');
+      
+      let successCount = 0;
+      let failureCount = 0;
+
+      for (const customer of targetList) {
+        const message = await personalizeMessage(adCopy, customer);
+        const result = await sendWhatsAppMessage(whatsappConfig, customer.mobile_number, message);
+
+        if (result.success) {
+          successCount++;
+          setCompletedMessages(successCount);
+        } else {
+          failureCount++;
+          setFailedMessages(failureCount);
+          addLog('Delivery Agent', `Delivery Failed to ${customer.name}: ${result.error}`, 'error');
+        }
+        
+        // Anti-spam delay
+        await new Promise(r => setTimeout(r, 500));
+      }
+
+      // 4. Finalization
+      addLog('Manager', `Campaign operational cycle completed. Success: ${successCount}, Failed: ${failureCount}.`, 'completed');
 
       onCampaignFinished({
-        id: `campaign-${Date.now()}`,
+        id: `c-${Date.now()}`,
         timestamp: new Date(),
         productName: productToPromote.name,
-        totalRecords: targetCustomers.length,
-        successCount: localSuccess,
-        failureCount: localFailed,
-        adCopy: adCopy,
+        totalRecords: targetList.length,
+        successCount,
+        failureCount,
+        adCopy,
         imageUrl: adImage,
         channel: 'WhatsApp'
       });
 
-    } catch (error: any) {
-      addLog('Manager', `SYSTEM FAILURE: ${error.message || 'Unknown error during AI generation'}`, 'error');
-      console.error(error);
+    } catch (err: any) {
+      addLog('Manager', `SYSTEM HALTED: ${err.message}`, 'error');
+      console.error(err);
     } finally {
       setIsCampaignRunning(false);
     }
@@ -145,26 +130,33 @@ const CampaignHub: React.FC<CampaignHubProps> = ({ customers, products, whatsapp
           </div>
 
           <div className="mb-6 p-4 bg-indigo-50 border border-indigo-100 rounded-xl">
-            <label className="text-xs font-bold text-indigo-700 uppercase mb-3 block">Channel Strategy</label>
+            <label className="text-xs font-bold text-indigo-700 uppercase mb-3 block">Primary Channel</label>
             <div className="flex items-center gap-3 text-indigo-900">
                <div className="p-2 bg-white rounded-lg shadow-sm border border-indigo-200">
                   <MessageCircle size={20} className="text-emerald-500" />
                </div>
                <div>
                  <p className="text-sm font-bold">WhatsApp Direct</p>
-                 <p className="text-[10px] text-indigo-600 opacity-70 italic font-medium">Meta Cloud API Priority</p>
+                 <p className="text-[10px] text-indigo-600 opacity-70 italic font-medium">Meta Cloud API Protocol</p>
                </div>
             </div>
           </div>
 
-          <div className="mb-6 p-3 bg-amber-50 border border-amber-100 rounded-lg">
+          <div className="mb-6 p-3 bg-slate-50 border border-slate-200 rounded-lg">
              <div className="flex items-center gap-2 mb-1">
-                <AlertCircle size={14} className="text-amber-500" />
-                <span className="text-[10px] font-bold text-amber-700 uppercase">Protection Threshold</span>
+                <AlertCircle size={14} className="text-slate-500" />
+                <span className="text-[10px] font-bold text-slate-600 uppercase">Batch Summary</span>
              </div>
-             <p className="text-[11px] text-amber-600 leading-tight">
-               Spam protection is active. Batches are limited to <strong>{PROTECTION_LIMIT}</strong> targets per operation.
-             </p>
+             <div className="space-y-1 mt-2">
+                <div className="flex justify-between text-xs">
+                  <span className="text-slate-500">Target Recipients:</span>
+                  <span className="font-bold text-slate-700">{customers.length}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-slate-500">Products selected:</span>
+                  <span className="font-bold text-slate-700">{products.length}</span>
+                </div>
+             </div>
           </div>
 
           <button
@@ -179,7 +171,7 @@ const CampaignHub: React.FC<CampaignHubProps> = ({ customers, products, whatsapp
             {isCampaignRunning ? (
               <>
                 <Loader2 className="animate-spin" size={20} />
-                AI Agents Working...
+                AI Orchestrating...
               </>
             ) : (
               <>
@@ -192,7 +184,7 @@ const CampaignHub: React.FC<CampaignHubProps> = ({ customers, products, whatsapp
 
         {activeProduct && activeProduct.ad_copy && (
           <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm animate-in fade-in slide-in-from-bottom-4">
-             <h3 className="text-sm font-semibold text-slate-500 mb-4 uppercase tracking-wider">Ad Creative Pack</h3>
+             <h3 className="text-sm font-semibold text-slate-500 mb-4 uppercase tracking-wider">AI Generated Creative</h3>
              <div className="border border-slate-100 rounded-lg p-4 bg-slate-50">
                {activeProduct.image_url && (
                  <img src={activeProduct.image_url} alt="Generated Ad" className="w-full h-48 object-cover rounded-md mb-4 shadow-sm border border-white" />
@@ -210,12 +202,12 @@ const CampaignHub: React.FC<CampaignHubProps> = ({ customers, products, whatsapp
           <div className="flex justify-between items-center mb-6 border-b border-slate-800 pb-4">
              <h2 className="text-white font-mono flex items-center gap-2 text-sm">
                <div className={`w-2 h-2 rounded-full ${isCampaignRunning ? 'bg-green-500 animate-pulse' : 'bg-slate-600'}`}></div>
-               MULTI_AGENT_ORCHESTRATOR_V3
+               MULTI_AGENT_LOG_VIEWER
              </h2>
              {isCampaignRunning && (
                 <div className="flex gap-4">
-                  <div className="text-emerald-400 text-xs font-mono">SENT: {completedMessages}</div>
-                  <div className="text-rose-400 text-xs font-mono">ERR: {failedMessages}</div>
+                  <div className="text-emerald-400 text-xs font-mono uppercase tracking-tighter">SUCCESS: {completedMessages}</div>
+                  <div className="text-rose-400 text-xs font-mono uppercase tracking-tighter">FAIL: {failedMessages}</div>
                 </div>
              )}
           </div>
@@ -224,8 +216,8 @@ const CampaignHub: React.FC<CampaignHubProps> = ({ customers, products, whatsapp
             {logs.length === 0 && (
                <div className="h-full flex flex-col items-center justify-center text-slate-500 font-mono italic text-sm text-center">
                  <ShieldCheck size={40} className="mb-4 opacity-20" />
-                 Awaiting deployment command.<br/>
-                 <span className="text-[10px] opacity-60 mt-2 block uppercase tracking-widest font-normal">Secure Multi-Channel Protocol Active</span>
+                 Ready for mission deployment.<br/>
+                 <span className="text-[10px] opacity-60 mt-2 block uppercase tracking-widest font-normal">Encrypted WhatsApp Protocol Standard 2.0</span>
                </div>
             )}
             {logs.map((log, i) => (
@@ -250,7 +242,7 @@ const CampaignHub: React.FC<CampaignHubProps> = ({ customers, products, whatsapp
                     }`}>
                       {log.agent}
                     </span>
-                    <span className="text-[10px] text-slate-500">{log.timestamp.toLocaleTimeString()}</span>
+                    <span className="text-[10px] text-slate-500 font-mono">{log.timestamp.toLocaleTimeString()}</span>
                   </div>
                   <p className={`text-sm leading-relaxed font-mono ${log.status === 'error' ? 'text-rose-200' : 'text-slate-300'}`}>
                     {log.message}

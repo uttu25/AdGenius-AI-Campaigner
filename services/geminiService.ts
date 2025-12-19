@@ -2,25 +2,30 @@
 import { GoogleGenAI } from "@google/genai";
 import { Product, Customer } from "../types";
 
-// Always initialize with the direct process.env.API_KEY as per core guidelines
+// Strictly adhering to naming convention and named parameter requirement
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export const generateAdCopy = async (product: Product): Promise<string> => {
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: `Create a compelling WhatsApp advertisement for the following product:
-      Name: ${product.name}
-      Description: ${product.description}
+      contents: `Create a professional and persuasive WhatsApp advertisement for:
+      Product: ${product.name}
+      Details: ${product.description}
       Price: ${product.price}
       
-      The ad should be engaging, include emojis, and have a clear call to action. 
-      Format it ready for a WhatsApp message. Keep it concise.`,
+      Requirements:
+      1. Use engaging emojis.
+      2. Clear call to action.
+      3. Format specifically for WhatsApp mobile reading.
+      4. Be concise but high-impact.`,
     });
-    return response.text || "Failed to generate ad copy.";
+    
+    // Use .text property as per guidelines (not a method)
+    return response.text || "AI Agent could not formulate ad copy at this time.";
   } catch (error) {
-    console.error("Ad copy generation failed:", error);
-    throw new Error("AI Creative Agent failed to generate copy. Check API key status.");
+    console.error("Gemini Creative Agent Error:", error);
+    throw new Error("Creative Agent offline. Please verify API key configuration.");
   }
 };
 
@@ -30,7 +35,7 @@ export const generateProductImage = async (product: Product): Promise<string | u
       model: 'gemini-2.5-flash-image',
       contents: {
         parts: [
-          { text: `High quality commercial product photography for an advertisement. Product: ${product.name}. Description: ${product.description}. White background, professional lighting.` }
+          { text: `A clean, professional studio product shot for a digital advertisement. Product: ${product.name}. Theme: ${product.description}. 4k resolution, centered, white background.` }
         ]
       },
       config: {
@@ -40,18 +45,22 @@ export const generateProductImage = async (product: Product): Promise<string | u
       }
     });
 
-    for (const part of response.candidates?.[0]?.content?.parts || []) {
-      if (part.inlineData) {
-        return `data:image/png;base64,${part.inlineData.data}`;
+    // Iterate through parts to find inlineData
+    if (response.candidates?.[0]?.content?.parts) {
+      for (const part of response.candidates[0].content.parts) {
+        if (part.inlineData) {
+          return `data:image/png;base64,${part.inlineData.data}`;
+        }
       }
     }
   } catch (error) {
-    console.error("Image generation failed", error);
+    console.error("Gemini Image Agent Error:", error);
   }
   return undefined;
 };
 
 export const personalizeMessage = async (adCopy: string, customer: Customer): Promise<string> => {
-    const salutation = customer.sex === 'Male' ? 'Mr.' : (customer.sex === 'Female' ? 'Ms.' : '');
-    return `Hi ${salutation} ${customer.name},\n\n${adCopy}`;
+    // Logic for personalized greeting
+    const greeting = customer.sex === 'Male' ? 'Mr.' : (customer.sex === 'Female' ? 'Ms.' : '');
+    return `Hello ${greeting} ${customer.name}!\n\n${adCopy}`;
 };
