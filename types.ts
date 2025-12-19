@@ -56,4 +56,5 @@ export interface User {
   name: string;
   isLoggedIn: boolean;
   isGoogleLinked: boolean;
+  autoScheduleDaily: boolean;
 }

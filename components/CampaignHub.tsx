@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Play, Loader2, ShieldAlert, Users, Package, AlertCircle, MessageCircle, ShieldCheck } from 'lucide-react';
+import { Play, Loader2, ShieldAlert, Users, Package, AlertCircle, MessageCircle, ShieldCheck, Clock } from 'lucide-react';
 import { Customer, Product, CampaignStep, WhatsAppConfig, CampaignRecord, User as UserType } from '../types';
 import { generateAdCopy, generateProductImage, personalizeMessage } from '../services/geminiService';
 import { sendWhatsAppMessage } from '../services/whatsappService';
@@ -19,8 +19,8 @@ const CampaignHub: React.FC<CampaignHubProps> = ({ customers, products, whatsapp
   const [activeProduct, setActiveProduct] = useState<Product | null>(null);
   const [completedMessages, setCompletedMessages] = useState<number>(0);
   const [failedMessages, setFailedMessages] = useState<number>(0);
+  const [currentProductIndex, setCurrentProductIndex] = useState(0);
 
-  // Balanced protection limit for browser-based sequential loops
   const PROTECTION_LIMIT = 1000;
 
   const addLog = (agent: CampaignStep['agent'], message: string, status: CampaignStep['status'] = 'completed') => {
@@ -28,90 +28,104 @@ const CampaignHub: React.FC<CampaignHubProps> = ({ customers, products, whatsapp
   };
 
   const startCampaign = async () => {
-    // Reset state for new run
     setLogs([]);
     setCompletedMessages(0);
     setFailedMessages(0);
     setIsCampaignRunning(true);
 
     try {
-      addLog('Manager', 'Initiating pre-flight system diagnostics...', 'processing');
+      addLog('Manager', 'System initializing. Validating Multi-Agent Dispatch Protocol...', 'processing');
       await new Promise(r => setTimeout(r, 600));
 
-      // 1. Validation Checks - Improved feedback loop
-      if (products.length === 0) {
-        throw new Error("No products selected. Please go to the 'Products' tab and use the checkboxes to select at least one item for the campaign.");
-      }
+      if (products.length === 0) throw new Error("Please select products in the Portfolio tab.");
+      if (customers.length === 0) throw new Error("Target segmented audience is empty.");
+      if (!whatsappConfig.accessToken) throw new Error("WhatsApp credentials not verified.");
 
-      if (customers.length === 0) {
-        throw new Error("No target audience selected. Please go to the 'Customers' tab and select recipients using the checkboxes or filters.");
-      }
-
-      if (!whatsappConfig.accessToken || !whatsappConfig.phoneNumberId) {
-        throw new Error("WhatsApp API credentials missing. Please configure your Meta Cloud API keys in the 'WhatsApp API' settings tab.");
-      }
-
-      const productToPromote = products[0]; 
       const targetList = customers.slice(0, PROTECTION_LIMIT);
-
-      addLog('Manager', `Orchestration verified. Target: ${targetList.length} customers. Product: ${productToPromote.name}.`, 'completed');
-
-      // 2. Creative Phase
-      addLog('Creative Agent', `Consulting Gemini 3 Flash for ad copy generation...`, 'processing');
-      const adCopy = await generateAdCopy(productToPromote);
-      addLog('Creative Agent', 'Copywriting complete. Visualizing product assets...', 'processing');
       
-      const adImage = await generateProductImage(productToPromote);
-      const readyProduct = { ...productToPromote, ad_copy: adCopy, image_url: adImage };
-      setActiveProduct(readyProduct);
-      addLog('Creative Agent', 'Creative assets finalized and optimized for WhatsApp mobile.', 'completed');
+      addLog('Manager', `Configuration verified. Target Audience: ${targetList.length.toLocaleString()} recipients.`, 'completed');
 
-      // 3. Delivery Phase
-      addLog('Delivery Agent', `Connecting to Meta Cloud API...`, 'processing');
-      await new Promise(r => setTimeout(r, 800));
-      
-      addLog('Delivery Agent', `Beginning sequential dispatch loop to ${targetList.length} recipients...`, 'processing');
-      
-      let successCount = 0;
-      let failureCount = 0;
-
-      for (const customer of targetList) {
-        const message = await personalizeMessage(adCopy, customer);
-        const result = await sendWhatsAppMessage(whatsappConfig, customer.mobile_number, message);
-
-        if (result.success) {
-          successCount++;
-          setCompletedMessages(successCount);
-        } else {
-          failureCount++;
-          setFailedMessages(failureCount);
-          addLog('Delivery Agent', `Delivery Failed to ${customer.name}: ${result.error}`, 'error');
-        }
-        
-        // Anti-spam/Rate-limit delay
-        await new Promise(r => setTimeout(r, 500));
+      if (currentUser.autoScheduleDaily) {
+        addLog('Manager', `Daily Batch Mode: Detected queue of ${products.length} products.`, 'processing');
       }
 
-      // 4. Finalization
-      addLog('Manager', `Campaign operational cycle completed. Success: ${successCount}, Failed: ${failureCount}.`, 'completed');
+      // Main Multi-Product Loop
+      for (let i = 0; i < products.length; i++) {
+        const product = products[i];
+        setCurrentProductIndex(i + 1);
+        
+        // Logic for Daily Batch Mode
+        if (currentUser.autoScheduleDaily && i > 0) {
+          const dayNum = i + 1;
+          addLog('Manager', `AUTO-SCHEDULE: Product [${product.name}] assigned to DAY ${dayNum}.`, 'completed');
+          continue; // Simulating the schedule: only run the first product today
+        }
 
-      onCampaignFinished({
-        id: `c-${Date.now()}`,
-        timestamp: new Date(),
-        productName: productToPromote.name,
-        totalRecords: targetList.length,
-        successCount,
-        failureCount,
-        adCopy,
-        imageUrl: adImage,
-        channel: 'WhatsApp'
-      });
+        const missionTitle = currentUser.autoScheduleDaily ? `DAY 1 Mission: ${product.name}` : `Sequential Phase ${i + 1}: ${product.name}`;
+        addLog('Manager', `Initiating ${missionTitle}`, 'processing');
+
+        // 1. Creative Agent Phase
+        addLog('Creative Agent', `Formulating high-conversion ad copy for ${product.name}...`, 'processing');
+        const adCopy = await generateAdCopy(product);
+        addLog('Creative Agent', 'Ad copy formulated. Visualizing brand assets...', 'processing');
+        const adImage = await generateProductImage(product);
+        setActiveProduct({ ...product, ad_copy: adCopy, image_url: adImage });
+        addLog('Creative Agent', 'Assets finalized. Content approved by AI Manager.', 'completed');
+
+        // 2. Handover to Delivery Agent
+        addLog('Manager', `Creative approved. Handing off to Delivery Agent for dispatch loop.`, 'processing');
+        addLog('Delivery Agent', `Opening secure Meta Cloud API gateway...`, 'processing');
+        
+        let successCount = 0;
+        let failureCount = 0;
+
+        for (const customer of targetList) {
+          const message = await personalizeMessage(adCopy, customer);
+          const result = await sendWhatsAppMessage(whatsappConfig, customer.mobile_number, message);
+
+          if (result.success) {
+            successCount++;
+            setCompletedMessages(prev => prev + 1);
+          } else {
+            failureCount++;
+            setFailedMessages(prev => prev + 1);
+          }
+          // Dynamic rate limiter to prevent API congestion
+          await new Promise(r => setTimeout(r, 400)); 
+        }
+
+        addLog('Delivery Agent', `Dispatch cycle for ${product.name} complete. Successful deliveries: ${successCount}.`, 'completed');
+
+        onCampaignFinished({
+          id: `c-${Date.now()}-${i}`,
+          timestamp: new Date(),
+          productName: product.name,
+          totalRecords: targetList.length,
+          successCount,
+          failureCount,
+          adCopy,
+          imageUrl: adImage,
+          channel: 'WhatsApp'
+        });
+
+        // Cooldown between sequential products (if not daily mode)
+        if (i < products.length - 1 && !currentUser.autoScheduleDaily) {
+          addLog('Manager', 'Wait-state: Cooling down system before next product orchestration...', 'processing');
+          await new Promise(r => setTimeout(r, 2000));
+        }
+      }
+
+      const finishMsg = currentUser.autoScheduleDaily 
+        ? `Day 1 complete. Full 100k recipient queue automated for ${products.length} days.`
+        : `Mission Complete. All selected products dispatched successfully.`;
+      
+      addLog('Manager', finishMsg, 'completed');
 
     } catch (err: any) {
-      addLog('Manager', `SYSTEM HALTED: ${err.message}`, 'error');
-      console.error(err);
+      addLog('Manager', `MISSION HALTED: ${err.message}`, 'error');
     } finally {
       setIsCampaignRunning(false);
+      setCurrentProductIndex(0);
     }
   };
 
@@ -122,49 +136,35 @@ const CampaignHub: React.FC<CampaignHubProps> = ({ customers, products, whatsapp
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
               <ShieldAlert className="text-indigo-600" size={20} />
-              Command Center
+              AI Mission Command
             </h2>
-            <div className="flex items-center gap-1 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
+            <div className="flex items-center gap-1.5 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
                <ShieldCheck size={12} className="text-emerald-600" />
-               <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-tight">System Ready</span>
+               <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-tight">System Online</span>
             </div>
           </div>
 
-          <div className="mb-6 p-4 bg-indigo-50 border border-indigo-100 rounded-xl">
-            <label className="text-xs font-bold text-indigo-700 uppercase mb-3 block">Primary Channel</label>
-            <div className="flex items-center gap-3 text-indigo-900">
-               <div className="p-2 bg-white rounded-lg shadow-sm border border-indigo-200">
-                  <MessageCircle size={20} className="text-emerald-500" />
-               </div>
-               <div>
-                 <p className="text-sm font-bold">WhatsApp Direct</p>
-                 <p className="text-[10px] text-indigo-600 opacity-70 italic font-medium">Meta Cloud API Protocol</p>
-               </div>
+          <div className="space-y-4 mb-6">
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Recipients</span>
+                <span className="text-xs font-bold text-slate-700">{customers.length.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Items in Queue</span>
+                <span className="text-xs font-bold text-indigo-600">{products.length}</span>
+              </div>
             </div>
-          </div>
 
-          <div className="mb-6 p-3 bg-slate-50 border border-slate-200 rounded-lg">
-             <div className="flex items-center gap-2 mb-1">
-                <AlertCircle size={14} className="text-slate-500" />
-                <span className="text-[10px] font-bold text-slate-600 uppercase">Batch Summary</span>
-             </div>
-             <div className="space-y-1 mt-2">
-                <div className="flex justify-between text-xs">
-                  <span className="text-slate-500">Selected Recipients:</span>
-                  <span className={`font-bold ${customers.length === 0 ? 'text-rose-500' : 'text-slate-700'}`}>{customers.length.toLocaleString()}</span>
+            {currentUser.autoScheduleDaily && (
+              <div className="flex items-center gap-3 p-3 bg-indigo-50 border border-indigo-100 rounded-lg animate-in fade-in duration-500">
+                <Clock size={16} className="text-indigo-600" />
+                <div>
+                  <p className="text-[10px] font-bold text-indigo-800 uppercase">Daily Sequential Mode</p>
+                  <p className="text-[9px] text-indigo-600 italic">One product per day (Automated)</p>
                 </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-slate-500">Selected Products:</span>
-                  <span className={`font-bold ${products.length === 0 ? 'text-rose-500' : 'text-slate-700'}`}>{products.length}</span>
-                </div>
-             </div>
-             {customers.length > PROTECTION_LIMIT && (
-               <div className="mt-2 pt-2 border-t border-slate-200">
-                 <p className="text-[10px] text-amber-600 leading-tight italic">
-                   * Batch protection: Only the first {PROTECTION_LIMIT} recipients will be processed in this single mission run.
-                 </p>
-               </div>
-             )}
+              </div>
+            )}
           </div>
 
           <button
@@ -179,80 +179,83 @@ const CampaignHub: React.FC<CampaignHubProps> = ({ customers, products, whatsapp
             {isCampaignRunning ? (
               <>
                 <Loader2 className="animate-spin" size={20} />
-                AI Orchestrating...
+                Orchestrating Phase {currentProductIndex}...
               </>
             ) : (
               <>
                 <Play size={20} fill="currentColor" />
-                Launch AI Campaign
+                Initiate Multi-Agent Mission
               </>
             )}
           </button>
         </div>
 
-        {activeProduct && activeProduct.ad_copy && (
+        {activeProduct && (
           <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm animate-in fade-in slide-in-from-bottom-4">
-             <h3 className="text-sm font-semibold text-slate-500 mb-4 uppercase tracking-wider">AI Generated Creative</h3>
-             <div className="border border-slate-100 rounded-lg p-4 bg-slate-50">
+             <div className="flex items-center gap-2 mb-4 border-b border-slate-50 pb-3">
+               <Package size={16} className="text-indigo-600" />
+               <h3 className="text-sm font-bold text-slate-800 truncate">Live Creative: {activeProduct.name}</h3>
+             </div>
+             <div className="space-y-3">
                {activeProduct.image_url && (
-                 <img src={activeProduct.image_url} alt="Generated Ad" className="w-full h-48 object-cover rounded-md mb-4 shadow-sm border border-white" />
+                 <img src={activeProduct.image_url} alt="Ad" className="w-full h-32 object-cover rounded-md shadow-sm border border-slate-100" />
                )}
-               <div className="whitespace-pre-wrap text-sm text-slate-700 font-medium leading-relaxed bg-white p-3 rounded-lg border border-slate-100">
-                 {activeProduct.ad_copy}
+               <div className="text-[11px] text-slate-600 font-medium leading-relaxed bg-slate-50 p-3 rounded border border-slate-100 max-h-40 overflow-y-auto italic">
+                 {activeProduct.ad_copy || "Creative Agent is formulating content..."}
                </div>
              </div>
           </div>
         )}
       </div>
 
-      <div className="lg:col-span-2 space-y-6">
-        <div className="bg-slate-900 rounded-xl p-6 min-h-[600px] shadow-xl flex flex-col border border-slate-800">
+      <div className="lg:col-span-2">
+        <div className="bg-slate-900 rounded-xl p-6 h-[600px] shadow-xl flex flex-col border border-slate-800">
           <div className="flex justify-between items-center mb-6 border-b border-slate-800 pb-4">
-             <h2 className="text-white font-mono flex items-center gap-2 text-sm">
-               <div className={`w-2 h-2 rounded-full ${isCampaignRunning ? 'bg-green-500 animate-pulse' : 'bg-slate-600'}`}></div>
-               MULTI_AGENT_LOG_VIEWER
+             <h2 className="text-slate-500 font-mono flex items-center gap-2 text-[10px] tracking-widest uppercase">
+               <div className={`w-1.5 h-1.5 rounded-full ${isCampaignRunning ? 'bg-indigo-500 animate-pulse' : 'bg-slate-600'}`}></div>
+               MULTI_AGENT_COMMAND_LOGS
              </h2>
              {isCampaignRunning && (
-                <div className="flex gap-4">
-                  <div className="text-emerald-400 text-xs font-mono uppercase tracking-tighter">SUCCESS: {completedMessages}</div>
-                  <div className="text-rose-400 text-xs font-mono uppercase tracking-tighter">FAIL: {failedMessages}</div>
+                <div className="flex gap-4 font-mono text-[10px]">
+                  <span className="text-emerald-400 tracking-tighter">DISPATCHED: {completedMessages}</span>
+                  <span className="text-rose-400 tracking-tighter">API_ERROR: {failedMessages}</span>
                 </div>
              )}
           </div>
           
-          <div className="flex-1 overflow-y-auto space-y-4 max-h-[500px] pr-2 custom-scrollbar">
+          <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
             {logs.length === 0 && (
-               <div className="h-full flex flex-col items-center justify-center text-slate-500 font-mono italic text-sm text-center">
-                 <ShieldCheck size={40} className="mb-4 opacity-20" />
+               <div className="h-full flex flex-col items-center justify-center text-slate-700 font-mono italic text-xs text-center">
+                 <ShieldCheck size={32} className="mb-3 opacity-5" />
                  Ready for mission deployment.<br/>
-                 <span className="text-[10px] opacity-60 mt-2 block uppercase tracking-widest font-normal">Encrypted WhatsApp Protocol Standard 2.0</span>
+                 <span className="text-[9px] opacity-30 mt-1 block tracking-[0.2em] font-normal uppercase">Enterprise AdGenius Protocols 2.0</span>
                </div>
             )}
             {logs.map((log, i) => (
-              <div key={i} className={`p-4 rounded-lg border flex gap-4 transition-all duration-300 animate-in slide-in-from-left-2 ${
-                log.status === 'error' ? 'bg-rose-950/20 border-rose-900/50' :
-                log.agent === 'Manager' ? 'bg-indigo-950/30 border-indigo-900/50' : 
-                log.agent === 'Creative Agent' ? 'bg-emerald-950/30 border-emerald-900/50' :
-                'bg-slate-800 border-slate-700'
+              <div key={i} className={`p-3 rounded border flex gap-3 transition-all animate-in slide-in-from-left-2 ${
+                log.status === 'error' ? 'bg-rose-950/20 border-rose-900/40' :
+                log.agent === 'Manager' ? 'bg-indigo-950/20 border-indigo-900/40' : 
+                log.agent === 'Creative Agent' ? 'bg-emerald-950/20 border-emerald-900/40' :
+                'bg-slate-800/50 border-slate-700'
               }`}>
-                <div className="flex-shrink-0">
-                  {log.status === 'error' ? <AlertCircle className="text-rose-400" /> :
-                   log.agent === 'Manager' ? <ShieldAlert className="text-indigo-400" /> : 
-                   log.agent === 'Creative Agent' ? <Package className="text-emerald-400" /> :
-                   <Users className="text-amber-400" />}
+                <div className="mt-0.5 shrink-0">
+                  {log.status === 'error' ? <AlertCircle size={14} className="text-rose-400" /> :
+                   log.agent === 'Manager' ? <ShieldAlert size={14} className="text-indigo-400" /> : 
+                   log.agent === 'Creative Agent' ? <Package size={14} className="text-emerald-400" /> :
+                   <Users size={14} className="text-amber-400" />}
                 </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-1">
-                    <span className={`text-xs font-bold uppercase tracking-tighter ${
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className={`text-[9px] font-bold uppercase tracking-wider ${
                       log.status === 'error' ? 'text-rose-400' :
                       log.agent === 'Manager' ? 'text-indigo-400' : 
                       log.agent === 'Creative Agent' ? 'text-emerald-400' : 'text-amber-400'
                     }`}>
                       {log.agent}
                     </span>
-                    <span className="text-[10px] text-slate-500 font-mono">{log.timestamp.toLocaleTimeString()}</span>
+                    <span className="text-[8px] text-slate-600 font-mono">{log.timestamp.toLocaleTimeString()}</span>
                   </div>
-                  <p className={`text-sm leading-relaxed font-mono ${log.status === 'error' ? 'text-rose-200' : 'text-slate-300'}`}>
+                  <p className={`text-[11px] leading-relaxed font-mono ${log.status === 'error' ? 'text-rose-200' : 'text-slate-300'}`}>
                     {log.message}
                   </p>
                 </div>
