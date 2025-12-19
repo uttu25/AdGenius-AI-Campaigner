@@ -2,26 +2,31 @@
 import { GoogleGenAI } from "@google/genai";
 import { Product, Customer } from "../types";
 
-// Strictly adhering to naming convention and named parameter requirement
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-export const generateAdCopy = async (product: Product): Promise<string> => {
+export const generateAdCopy = async (product: Product, companyName?: string): Promise<string> => {
   try {
+    const brandContext = companyName ? `This advertisement is for "${companyName}". Ensure the tone aligns with this brand name.` : "This is a professional business advertisement.";
+    
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: `Create a professional and persuasive WhatsApp advertisement for:
       Product: ${product.name}
       Details: ${product.description}
       Price: ${product.price}
+      Link: ${product.url}
+      
+      Brand Identity: ${brandContext}
       
       Requirements:
-      1. Use engaging emojis.
-      2. Clear call to action.
-      3. Format specifically for WhatsApp mobile reading.
-      4. Be concise but high-impact.`,
+      1. Use engaging emojis appropriate for the product and brand.
+      2. Integrate the pricing naturally.
+      3. The Call to Action MUST feature the product link clearly.
+      4. Format specifically for WhatsApp mobile reading (bullet points, bold text).
+      5. Explicitly mention "${companyName || 'our store'}" as the provider.
+      6. Be concise but high-impact.`,
     });
     
-    // Use .text property as per guidelines (not a method)
     return response.text || "AI Agent could not formulate ad copy at this time.";
   } catch (error) {
     console.error("Gemini Creative Agent Error:", error);
@@ -29,13 +34,15 @@ export const generateAdCopy = async (product: Product): Promise<string> => {
   }
 };
 
-export const generateProductImage = async (product: Product): Promise<string | undefined> => {
+export const generateProductImage = async (product: Product, companyName?: string): Promise<string | undefined> => {
   try {
+    const brandContext = companyName ? `aligned with the visual identity of "${companyName}"` : "";
+    
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
       contents: {
         parts: [
-          { text: `A clean, professional studio product shot for a digital advertisement. Product: ${product.name}. Theme: ${product.description}. 4k resolution, centered, white background.` }
+          { text: `A clean, professional studio product shot ${brandContext}. Product: ${product.name}. Theme: ${product.description}. 4k resolution, centered, white background, commercial lighting.` }
         ]
       },
       config: {
@@ -45,7 +52,6 @@ export const generateProductImage = async (product: Product): Promise<string | u
       }
     });
 
-    // Iterate through parts to find inlineData
     if (response.candidates?.[0]?.content?.parts) {
       for (const part of response.candidates[0].content.parts) {
         if (part.inlineData) {
@@ -60,7 +66,6 @@ export const generateProductImage = async (product: Product): Promise<string | u
 };
 
 export const personalizeMessage = async (adCopy: string, customer: Customer): Promise<string> => {
-    // Logic for personalized greeting
     const greeting = customer.sex === 'Male' ? 'Mr.' : (customer.sex === 'Female' ? 'Ms.' : '');
     return `Hello ${greeting} ${customer.name}!\n\n${adCopy}`;
 };

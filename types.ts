@@ -15,6 +15,7 @@ export interface Product {
   name: string;
   description: string;
   price: string;
+  url: string; // Mandatory product link
   image_url?: string;
   ad_copy?: string;
 }
@@ -57,4 +58,6 @@ export interface User {
   isLoggedIn: boolean;
   isGoogleLinked: boolean;
   autoScheduleDaily: boolean;
+  logo?: string; // Company logo base64
+  companyName?: string; // Company name field
 }

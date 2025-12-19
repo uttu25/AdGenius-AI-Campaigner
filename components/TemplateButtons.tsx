@@ -21,7 +21,8 @@ const TemplateButtons: React.FC = () => {
   };
 
   const handleProductTemplate = () => {
-    const csvContent = "product_name,product_description,price\nWireless Headphones,Noise cancelling over-ear headphones,$199\nSmart Watch,Waterproof fitness tracker with GPS,$129";
+    // Added product_url as a mandatory column
+    const csvContent = "product_name,product_description,price,product_url\nWireless Headphones,Noise cancelling over-ear headphones,$199,https://example.com/headphones\nSmart Watch,Waterproof fitness tracker with GPS,$129,https://example.com/watch";
     downloadCSV('product_template.csv', csvContent);
   };
 

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Customer, Product } from '../types';
-import { Trash2, User, Package, CheckSquare, Square, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, AlertCircle } from 'lucide-react';
+import { Trash2, User, Package, CheckSquare, Square, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, AlertCircle, Link as LinkIcon } from 'lucide-react';
 
 interface DataGridProps {
   data: Customer[] | Product[];
@@ -10,7 +10,7 @@ interface DataGridProps {
   selectedIds: Set<string>;
   onToggleSelection: (id: string) => void;
   onToggleAll: (selectAll: boolean) => void;
-  isDailyMode?: boolean; // New prop to handle conditional select-all for products
+  isDailyMode?: boolean; 
 }
 
 const DataGrid: React.FC<DataGridProps> = ({ 
@@ -45,16 +45,13 @@ const DataGrid: React.FC<DataGridProps> = ({
   const allFilteredSelected = data.length > 0 && data.every(item => selectedIds.has(item.id));
 
   const handleSelection = (id: string) => {
-    // Limit to 5 only if NOT in daily mode for products
     if (type === 'product' && !isDailyMode && !selectedIds.has(id) && selectedIds.size >= 5) {
-      alert("Standard Campaign Limit: You can select a maximum of 5 products. Enable 'Daily Batch Mode' to select more for automated daily dispatch.");
+      alert("Standard Campaign Limit: You can select a maximum of 5 products. Enable 'Daily Batch Mode' to select more.");
       return;
     }
     onToggleSelection(id);
   };
 
-  // Determine if we should show the "Select All" button in the header
-  // Always show for customers. For products, show ONLY if daily mode is on.
   const showSelectAll = type === 'customer' || (type === 'product' && isDailyMode);
 
   return (
@@ -64,17 +61,16 @@ const DataGrid: React.FC<DataGridProps> = ({
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
               <tr>
-                <th className="px-4 py-3 w-10">
+                <th className="px-4 py-3 w-10 text-center">
                   {showSelectAll ? (
                     <button 
                       onClick={() => onToggleAll(!allFilteredSelected)}
-                      className="text-slate-400 hover:text-indigo-600 transition-colors"
-                      title={allFilteredSelected ? "Deselect All" : "Select All"}
+                      className="text-slate-400 hover:text-indigo-600 transition-colors mx-auto block"
                     >
                       {allFilteredSelected ? <CheckSquare size={18} className="text-indigo-600" /> : <Square size={18} />}
                     </button>
                   ) : (
-                    <div className="w-[18px]" /> // Placeholder for alignment
+                    <div className="w-[18px]" />
                   )}
                 </th>
                 {type === 'customer' ? (
@@ -89,6 +85,7 @@ const DataGrid: React.FC<DataGridProps> = ({
                     <th className="px-4 py-3">Campaign Product</th>
                     <th className="px-4 py-3">Description</th>
                     <th className="px-4 py-3">Pricing</th>
+                    <th className="px-4 py-3">Target URL</th>
                   </>
                 )}
                 <th className="px-4 py-3 w-10 text-right">Action</th>
@@ -100,20 +97,17 @@ const DataGrid: React.FC<DataGridProps> = ({
                 const actualIdx = startIndex + idx;
                 return (
                   <tr key={item.id} className={`transition-all duration-200 ${isSelected ? 'bg-indigo-50/40' : 'hover:bg-slate-50/30'}`}>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 text-center">
                       <button 
                         onClick={() => handleSelection(item.id)}
-                        className={`transition-colors ${isSelected ? 'text-indigo-600' : 'text-slate-300 hover:text-slate-400'}`}
+                        className={`transition-colors mx-auto block ${isSelected ? 'text-indigo-600' : 'text-slate-300 hover:text-slate-400'}`}
                       >
                         {isSelected ? <CheckSquare size={18} /> : <Square size={18} />}
                       </button>
                     </td>
                     {type === 'customer' ? (
                       <>
-                        <td className="px-4 py-3 font-semibold text-slate-700 flex items-center gap-2">
-                          <User size={14} className="text-slate-400" />
-                          {(item as Customer).name}
-                        </td>
+                        <td className="px-4 py-3 font-semibold text-slate-700">{(item as Customer).name}</td>
                         <td className="px-4 py-3 font-mono text-slate-500">{(item as Customer).mobile_number}</td>
                         <td className="px-4 py-3 text-slate-500">
                           <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 text-[9px] font-bold text-slate-600 uppercase mr-2">
@@ -129,8 +123,14 @@ const DataGrid: React.FC<DataGridProps> = ({
                           <Package size={14} className="text-slate-400" />
                           {(item as Product).name}
                         </td>
-                        <td className="px-4 py-3 text-slate-500 truncate max-w-xs text-xs">{(item as Product).description}</td>
+                        <td className="px-4 py-3 text-slate-500 truncate max-w-[150px] text-xs">{(item as Product).description}</td>
                         <td className="px-4 py-3 font-bold text-indigo-600">{(item as Product).price}</td>
+                        <td className="px-4 py-3">
+                           <a href={(item as Product).url} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-xs text-indigo-500 hover:text-indigo-700 font-medium">
+                             <LinkIcon size={12} />
+                             Link
+                           </a>
+                        </td>
                       </>
                     )}
                     <td className="px-4 py-3 text-right">
@@ -154,14 +154,6 @@ const DataGrid: React.FC<DataGridProps> = ({
             <p className="text-xs font-medium text-slate-400 italic">
               Record pool: <span className="text-slate-700 font-bold">{data.length.toLocaleString()}</span> entries
             </p>
-            {type === 'product' && (
-              <div className={`flex items-center gap-1.5 px-2 py-1 rounded border ${isDailyMode ? 'bg-indigo-50 border-indigo-100' : 'bg-amber-50 border-amber-100'}`}>
-                <AlertCircle size={10} className={isDailyMode ? 'text-indigo-500' : 'text-amber-500'} />
-                <span className={`text-[9px] font-bold uppercase ${isDailyMode ? 'text-indigo-700' : 'text-amber-700'}`}>
-                  {isDailyMode ? `Daily Queue: ${selectedIds.size}` : `Selection: ${selectedIds.size}/5`}
-                </span>
-              </div>
-            )}
           </div>
           
           <div className="flex items-center gap-1 bg-white p-1 rounded-lg border border-slate-200 shadow-sm">

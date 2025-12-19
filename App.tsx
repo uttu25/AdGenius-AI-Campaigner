@@ -59,26 +59,6 @@ const App: React.FC = () => {
   const uniqueCities = Array.from(new Set(customers.map(c => c.city))).filter(Boolean);
   const uniqueStates = Array.from(new Set(customers.map(c => c.state))).filter(Boolean);
 
-  const removeCustomer = (idx: number) => {
-    const customerToRemove = filteredCustomers[idx];
-    setCustomers(prev => prev.filter(c => c.id !== customerToRemove.id));
-    setSelectedCustomerIds(prev => {
-      const next = new Set(prev);
-      next.delete(customerToRemove.id);
-      return next;
-    });
-  };
-
-  const removeProduct = (idx: number) => {
-    const productToDelete = filteredProducts[idx];
-    setProducts(prev => prev.filter(p => p.id !== productToDelete.id));
-    setSelectedProductIds(prev => {
-      const next = new Set(prev);
-      next.delete(productToDelete.id);
-      return next;
-    });
-  };
-
   const toggleCustomerSelection = (id: string) => {
     setSelectedCustomerIds(prev => {
       const next = new Set(prev);
@@ -105,7 +85,6 @@ const App: React.FC = () => {
       if (next.has(id)) {
         next.delete(id);
       } else {
-        // Enforce limit of 5 only if daily mode is OFF
         if (!currentUser?.autoScheduleDaily && next.size >= 5) {
           return prev; 
         }
@@ -116,7 +95,6 @@ const App: React.FC = () => {
   };
 
   const toggleAllFilteredProducts = (selectAll: boolean) => {
-    // Only allow "Select All" for products if daily mode is active
     if (!currentUser?.autoScheduleDaily) return;
 
     setSelectedProductIds(prev => {
@@ -132,7 +110,6 @@ const App: React.FC = () => {
   const toggleDailyScheduling = () => {
     if (currentUser) {
       const newMode = !currentUser.autoScheduleDaily;
-      // Truncate selection to 5 if switching back to manual mode to maintain safety limits
       if (!newMode && selectedProductIds.size > 5) {
         const truncated = Array.from(selectedProductIds).slice(0, 5);
         setSelectedProductIds(new Set(truncated));
@@ -141,13 +118,22 @@ const App: React.FC = () => {
     }
   };
 
+  const handleUpdateLogo = (logo: string) => {
+    setCurrentUser(prev => prev ? { ...prev, logo } : null);
+  };
+
+  const handleUpdateCompanyName = (companyName: string) => {
+    setCurrentUser(prev => prev ? { ...prev, companyName } : null);
+  };
+
   const handleLogin = (email: string) => {
     setCurrentUser({
       email,
       name: email.split('@')[0],
       isLoggedIn: true,
       isGoogleLinked: true,
-      autoScheduleDaily: false
+      autoScheduleDaily: false,
+      companyName: '' 
     });
     setActiveTab('dashboard');
   };
@@ -161,9 +147,11 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row">
       <aside className="w-full md:w-72 bg-white border-r border-slate-200 p-6 space-y-8 flex flex-col shadow-sm sticky top-0 h-screen">
-        <div className="flex items-center gap-3 text-indigo-600 px-2">
-          <Megaphone size={32} />
-          <h1 className="text-xl font-black tracking-tighter uppercase italic">AdGenius <span className="text-slate-400 font-light not-italic">Pro</span></h1>
+        <div className="flex items-center gap-3 text-indigo-600 px-2 overflow-hidden">
+          <Megaphone size={32} className="shrink-0" />
+          <div className="min-w-0">
+             <h1 className="text-xl font-black tracking-tighter uppercase italic">AdGenius <span className="text-slate-400 font-light not-italic">Pro</span></h1>
+          </div>
         </div>
 
         <nav className="flex-1 space-y-1">
@@ -175,7 +163,7 @@ const App: React.FC = () => {
         </nav>
 
         {hasAnySelection && (
-          <div className="p-4 bg-indigo-50 rounded-xl border border-indigo-100 animate-in fade-in slide-in-from-bottom-2">
+          <div className="p-4 bg-indigo-50 rounded-xl border border-indigo-100">
             <div className="flex justify-between items-start mb-2">
               <span className="text-[10px] font-bold text-indigo-700 uppercase">Selection Queue</span>
             </div>
@@ -195,7 +183,7 @@ const App: React.FC = () => {
               onClick={() => setActiveTab('campaign')}
               className="w-full mt-3 py-1.5 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700 transition-colors shadow-md shadow-indigo-100"
             >
-              Configure Mission
+              Start Mission
             </button>
           </div>
         )}
@@ -205,14 +193,15 @@ const App: React.FC = () => {
            <NavItem icon={<User size={20} />} label="Profile" active={activeTab === 'general-settings'} onClick={() => setActiveTab('general-settings')} />
            
            <div className="px-4 py-4 mt-4 bg-indigo-600 rounded-2xl flex items-center gap-3 shadow-lg border border-indigo-500 relative overflow-hidden group">
-             <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-indigo-600 text-xs font-bold shrink-0">
-               {currentUser.email.charAt(0).toUpperCase()}
+             <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-indigo-600 text-xs font-bold shrink-0 overflow-hidden">
+               {currentUser.logo ? (
+                 <img src={currentUser.logo} alt="Logo" className="w-full h-full object-cover" />
+               ) : (
+                 (currentUser.companyName || currentUser.email).charAt(0).toUpperCase()
+               )}
              </div>
              <div className="overflow-hidden z-10">
-               <div className="flex items-center gap-1">
-                 <p className="text-[9px] font-bold text-indigo-200 uppercase tracking-widest">Enterprise Access</p>
-                 <div className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse"></div>
-               </div>
+               <p className="text-[9px] font-bold text-indigo-200 uppercase tracking-widest truncate">{currentUser.companyName || 'Enterprise Access'}</p>
                <p className="text-xs font-bold text-white truncate max-w-[140px]">{currentUser.email}</p>
              </div>
            </div>
@@ -228,18 +217,9 @@ const App: React.FC = () => {
               {activeTab === 'products' && 'Product Portfolio'}
               {activeTab === 'campaign' && 'AI Mission Command'}
               {activeTab === 'history' && 'Operational History'}
-              {activeTab === 'api-settings' && 'Meta Cloud Gateway'}
+              {activeTab === 'api-settings' && 'WhatsApp Cloud Gateway'}
               {activeTab === 'general-settings' && 'Enterprise Account'}
             </h2>
-            <p className="text-slate-500 text-sm">
-              {activeTab === 'dashboard' && `System status: Operational. ${customers.length.toLocaleString()} records in database.`}
-              {activeTab === 'customers' && `Enterprise-grade virtual rendering active for ${customers.length.toLocaleString()} records.`}
-              {activeTab === 'products' && `Select items for AI orchestration. ${currentUser.autoScheduleDaily ? 'Daily automation active.' : 'Select up to 5 products.'}`}
-              {activeTab === 'campaign' && 'Coordinate Manager, Creative, and Delivery agents for multi-product outreach.'}
-              {activeTab === 'history' && 'Past campaign performance analytics and logs.'}
-              {activeTab === 'api-settings' && 'Configure the official WhatsApp Business communication protocol.'}
-              {activeTab === 'general-settings' && `Linked Identity: ${currentUser.email}`}
-            </p>
           </div>
           <TemplateButtons />
         </header>
@@ -283,11 +263,10 @@ const App: React.FC = () => {
           <div className="space-y-6">
             <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
               <ProductFilter searchTerm={productSearch} onSearchChange={setProductSearch} />
-              
               <div className="flex items-center gap-3 p-4 bg-white border border-slate-200 rounded-xl shadow-sm h-full flex-shrink-0">
                 <div className="flex flex-col">
                   <span className="text-xs font-bold text-slate-700">Daily Batch Mode</span>
-                  <span className="text-[10px] text-slate-400 italic">Unlocks select-all & automated dispatch</span>
+                  <span className="text-[10px] text-slate-400 italic">Unlocks select-all</span>
                 </div>
                 <button 
                   onClick={toggleDailyScheduling}
@@ -297,7 +276,6 @@ const App: React.FC = () => {
                 </button>
               </div>
             </div>
-            
             <DataGrid 
               data={filteredProducts} 
               type="product" 
@@ -321,7 +299,17 @@ const App: React.FC = () => {
 
         {activeTab === 'history' && <CampaignHistory history={history} />}
         {activeTab === 'api-settings' && <WhatsAppSettings config={whatsappConfig} setConfig={setWhatsappConfig} onLogout={() => setCurrentUser(null)} onDeleteUserId={() => setWhatsappConfig(p => ({ ...p, businessAccountId: '' }))} />}
-        {activeTab === 'general-settings' && <GeneralSettings userEmail={currentUser.email} onLogout={() => setCurrentUser(null)} onDeleteAccount={() => setCurrentUser(null)} />}
+        {activeTab === 'general-settings' && (
+          <GeneralSettings 
+            userEmail={currentUser.email} 
+            logo={currentUser.logo}
+            companyName={currentUser.companyName}
+            onUpdateLogo={handleUpdateLogo}
+            onUpdateCompanyName={handleUpdateCompanyName}
+            onLogout={() => setCurrentUser(null)} 
+            onDeleteAccount={() => setCurrentUser(null)} 
+          />
+        )}
       </main>
     </div>
   );
