@@ -50,6 +50,7 @@ export interface CampaignRecord {
   adCopy: string;
   imageUrl?: string;
   channel: 'WhatsApp';
+  failureReasons?: string[]; // Details about why messages failed
 }
 
 export interface User {

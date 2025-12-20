@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { CampaignRecord } from '../types';
-import { History, CheckCircle2, XCircle, Calendar, Package } from 'lucide-react';
+import { History, CheckCircle2, XCircle, Calendar, Package, AlertCircle } from 'lucide-react';
 
 interface CampaignHistoryProps {
   history: CampaignRecord[];
@@ -60,14 +60,37 @@ const CampaignHistory: React.FC<CampaignHistoryProps> = ({ history }) => {
           </div>
 
           <div className="mt-6 pt-4 border-t border-slate-50">
-            <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Campaign Content</h4>
-            <div className="flex gap-4 items-start">
-              {record.imageUrl && (
-                <img src={record.imageUrl} alt="Ad" className="w-20 h-20 object-cover rounded-lg border border-slate-100" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Campaign Content</h4>
+                <div className="flex gap-4 items-start">
+                  {record.imageUrl && (
+                    <img src={record.imageUrl} alt="Ad" className="w-20 h-20 object-cover rounded-lg border border-slate-100 shrink-0" />
+                  )}
+                  <p className="text-xs text-slate-600 italic line-clamp-4 leading-relaxed">
+                    "{record.adCopy}"
+                  </p>
+                </div>
+              </div>
+
+              {record.failureCount > 0 && record.failureReasons && record.failureReasons.length > 0 && (
+                <div className="bg-rose-50/50 p-4 rounded-lg border border-rose-100">
+                  <h4 className="text-[10px] font-bold text-rose-600 uppercase tracking-widest mb-2 flex items-center gap-1">
+                    <AlertCircle size={12} /> Failure Intelligence
+                  </h4>
+                  <ul className="space-y-1.5">
+                    {record.failureReasons.map((reason, idx) => (
+                      <li key={idx} className="text-[11px] text-rose-800 leading-tight flex gap-2">
+                        <span className="shrink-0">•</span>
+                        <span>{reason}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="mt-3 text-[9px] text-rose-400 italic font-medium">
+                    Recommendation: Verify recipient numbers and WhatsApp API quotas.
+                  </p>
+                </div>
               )}
-              <p className="text-sm text-slate-600 italic line-clamp-3 leading-relaxed">
-                "{record.adCopy}"
-              </p>
             </div>
           </div>
         </div>

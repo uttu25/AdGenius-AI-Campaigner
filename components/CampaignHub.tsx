@@ -76,6 +76,7 @@ const CampaignHub: React.FC<CampaignHubProps> = ({ customers, products, whatsapp
         
         let successCount = 0;
         let failureCount = 0;
+        const errorsEncountered = new Set<string>();
 
         for (const customer of targetList) {
           const message = await personalizeMessage(adCopy, customer);
@@ -87,11 +88,12 @@ const CampaignHub: React.FC<CampaignHubProps> = ({ customers, products, whatsapp
           } else {
             failureCount++;
             setFailedMessages(prev => prev + 1);
+            if (result.error) errorsEncountered.add(result.error);
           }
           await new Promise(r => setTimeout(r, 400)); 
         }
 
-        addLog('Delivery Agent', `Dispatch cycle for ${product.name} complete. Success: ${successCount}.`, 'completed');
+        addLog('Delivery Agent', `Dispatch cycle for ${product.name} complete. Success: ${successCount}. Failures: ${failureCount}.`, 'completed');
 
         onCampaignFinished({
           id: `c-${Date.now()}-${i}`,
@@ -102,7 +104,8 @@ const CampaignHub: React.FC<CampaignHubProps> = ({ customers, products, whatsapp
           failureCount,
           adCopy,
           imageUrl: adImage,
-          channel: 'WhatsApp'
+          channel: 'WhatsApp',
+          failureReasons: Array.from(errorsEncountered)
         });
 
         if (i < products.length - 1 && !currentUser.autoScheduleDaily) {
