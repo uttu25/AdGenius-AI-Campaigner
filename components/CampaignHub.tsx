@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Play, Loader2, ShieldAlert, Users, Package, AlertCircle, MessageCircle, ShieldCheck, Clock, Link as LinkIcon, Building2 } from 'lucide-react';
+import { Play, Loader2, ShieldAlert, Users, Package, AlertCircle, MessageCircle, ShieldCheck, Clock, Link as LinkIcon, Building2, Send } from 'lucide-react';
 import { Customer, Product, CampaignStep, WhatsAppConfig, CampaignRecord, User as UserType } from '../types';
 import { generateAdCopy, generateProductImage, personalizeMessage } from '../services/geminiService';
 import { sendWhatsAppMessage } from '../services/whatsappService';
@@ -34,45 +34,50 @@ const CampaignHub: React.FC<CampaignHubProps> = ({ customers, products, whatsapp
     setIsCampaignRunning(true);
 
     try {
-      addLog('Manager', `Initializing Mission Control for ${currentUser.companyName || 'Enterprise'}.`, 'processing');
-      await new Promise(r => setTimeout(r, 600));
+      addLog('Manager', `SYSTEM INITIALIZED. Identity: ${currentUser.companyName || 'Corporate Admin'}. Mode: ${currentUser.autoScheduleDaily ? 'DAILY_BATCH' : 'STANDARD'}.`, 'processing');
+      await new Promise(r => setTimeout(r, 800));
 
-      if (products.length === 0) throw new Error("Please select products in the Portfolio tab.");
-      if (customers.length === 0) throw new Error("Target segmented audience is empty.");
-      if (!whatsappConfig.accessToken) throw new Error("WhatsApp credentials not verified.");
+      if (products.length === 0) throw new Error("No products in mission queue. Select from Portfolio.");
+      if (customers.length === 0) throw new Error("Target audience empty. Select customers from Segments.");
+      if (!whatsappConfig.accessToken) throw new Error("WhatsApp API connection missing.");
 
       const targetList = customers.slice(0, PROTECTION_LIMIT);
-      
-      addLog('Manager', `Identity Verified: ${currentUser.companyName || 'Standard Brand'}. Audience size: ${targetList.length.toLocaleString()}.`, 'completed');
-
-      if (currentUser.autoScheduleDaily) {
-        addLog('Manager', `Daily Batch Mode: Detected queue of ${products.length} products for sequential delivery.`, 'processing');
-      }
+      addLog('Manager', `Validation complete. Target Audience: ${targetList.length} verified recipients.`, 'completed');
 
       for (let i = 0; i < products.length; i++) {
         const product = products[i];
-        setCurrentProductIndex(i + 1);
-        
+        const productNum = i + 1;
+        setCurrentProductIndex(productNum);
+
+        // --- BATCH MODE LOGIC ---
         if (currentUser.autoScheduleDaily && i > 0) {
-          const dayNum = i + 1;
-          addLog('Manager', `AUTO-SCHEDULE: Product [${product.name}] assigned to DAY ${dayNum}.`, 'completed');
+          const scheduleDay = i + 1;
+          addLog('Manager', `SCHEDULING: [${product.name}] queued for automated delivery on DAY ${scheduleDay}.`, 'pending');
           continue; 
         }
 
-        const missionTitle = currentUser.autoScheduleDaily ? `DAY 1 Mission: ${product.name}` : `Sequential Phase ${i + 1}: ${product.name}`;
-        addLog('Manager', `Initiating ${missionTitle}`, 'processing');
+        const phaseLabel = currentUser.autoScheduleDaily ? "DAILY SLOT 1" : `PHASE ${productNum}/${products.length}`;
+        addLog('Manager', `--- INITIATING ${phaseLabel}: [${product.name}] ---`, 'processing');
 
-        // 1. Creative Agent Phase
-        addLog('Creative Agent', `Consulting ${currentUser.companyName || 'brand'} guidelines for ${product.name}...`, 'processing');
+        // 1. MANAGER DELEGATES TO CREATIVE AGENT
+        addLog('Manager', `[DELEGATION] -> Creative Agent: Generate high-impact copy for "${product.name}". Use Brand Identity: ${currentUser.companyName || 'Default'}.`, 'processing');
+        await new Promise(r => setTimeout(r, 500));
+
+        // 2. CREATIVE AGENT EXECUTION
+        addLog('Creative Agent', `Instruction received. Formulating campaign assets for ${product.name}...`, 'processing');
         const adCopy = await generateAdCopy(product, currentUser.companyName);
-        addLog('Creative Agent', 'Ad copy formulated. Visualizing branded assets...', 'processing');
         const adImage = await generateProductImage(product, currentUser.companyName);
+        
         setActiveProduct({ ...product, ad_copy: adCopy, image_url: adImage });
-        addLog('Creative Agent', 'Content approved by AI Manager.', 'completed');
+        addLog('Creative Agent', `CONTENT READY. Ad copy and visual approved. Reporting back to Manager.`, 'completed');
+        await new Promise(r => setTimeout(r, 600));
 
-        // 2. Handover to Delivery Agent
-        addLog('Manager', `Branding verified. Handing off to Delivery Agent for dispatch loop.`, 'processing');
-        addLog('Delivery Agent', `Opening WhatsApp Gateway for ${targetList.length} recipients...`, 'processing');
+        // 3. MANAGER DELEGATES TO DELIVERY AGENT
+        addLog('Manager', `Content approved. [DELEGATION] -> Delivery Agent: Initiate dispatch sequence to ${targetList.length} recipients.`, 'processing');
+        await new Promise(r => setTimeout(r, 500));
+
+        // 4. DELIVERY AGENT EXECUTION
+        addLog('Delivery Agent', `Instruction received. Opening WhatsApp Cloud Gateway...`, 'processing');
         
         let successCount = 0;
         let failureCount = 0;
@@ -90,11 +95,12 @@ const CampaignHub: React.FC<CampaignHubProps> = ({ customers, products, whatsapp
             setFailedMessages(prev => prev + 1);
             if (result.error) errorsEncountered.add(result.error);
           }
-          await new Promise(r => setTimeout(r, 400)); 
+          // Small delay for realism and to avoid API bursts
+          await new Promise(r => setTimeout(r, 300)); 
         }
 
-        addLog('Delivery Agent', `Dispatch cycle for ${product.name} complete. Success: ${successCount}. Failures: ${failureCount}.`, 'completed');
-
+        addLog('Delivery Agent', `DISPATCH COMPLETE. Reporting results to Manager: Success (${successCount}), Failure (${failureCount}).`, 'completed');
+        
         onCampaignFinished({
           id: `c-${Date.now()}-${i}`,
           timestamp: new Date(),
@@ -109,19 +115,19 @@ const CampaignHub: React.FC<CampaignHubProps> = ({ customers, products, whatsapp
         });
 
         if (i < products.length - 1 && !currentUser.autoScheduleDaily) {
-          addLog('Manager', 'Wait-state: System cooldown before next product phase...', 'processing');
+          addLog('Manager', 'Phase complete. System cooling down before next delegation...', 'processing');
           await new Promise(r => setTimeout(r, 2000));
         }
       }
 
-      const finishMsg = currentUser.autoScheduleDaily 
-        ? `Day 1 complete. Full audience queue automated for ${products.length} days under ${currentUser.companyName || 'Enterprise'} brand.`
-        : `Mission Complete. All selected products dispatched successfully.`;
+      const finalReport = currentUser.autoScheduleDaily 
+        ? `DAY 1 Mission successful. Remaining ${products.length - 1} products scheduled sequentially.`
+        : `ALL MISSIONS COMPLETE. System entering idle state.`;
       
-      addLog('Manager', finishMsg, 'completed');
+      addLog('Manager', finalReport, 'completed');
 
     } catch (err: any) {
-      addLog('Manager', `MISSION HALTED: ${err.message}`, 'error');
+      addLog('Manager', `MISSION FAILURE: ${err.message}`, 'error');
     } finally {
       setIsCampaignRunning(false);
       setCurrentProductIndex(0);
@@ -139,7 +145,7 @@ const CampaignHub: React.FC<CampaignHubProps> = ({ customers, products, whatsapp
             </h2>
             <div className="flex items-center gap-1.5 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
                <ShieldCheck size={12} className="text-emerald-600" />
-               <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-tight">System Online</span>
+               <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-tight">Manager Active</span>
             </div>
           </div>
 
@@ -151,14 +157,18 @@ const CampaignHub: React.FC<CampaignHubProps> = ({ customers, products, whatsapp
               </div>
             )}
             
-            <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Recipients</span>
-                <span className="text-xs font-bold text-slate-700">{customers.length.toLocaleString()}</span>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Recipients</span>
+                <span className="text-xs font-bold text-slate-700 flex items-center gap-1">
+                  <Users size={12} /> {customers.length.toLocaleString()}
+                </span>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Items in Queue</span>
-                <span className="text-xs font-bold text-indigo-600">{products.length}</span>
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Items</span>
+                <span className="text-xs font-bold text-indigo-600 flex items-center gap-1">
+                  <Package size={12} /> {products.length}
+                </span>
               </div>
             </div>
 
@@ -166,8 +176,8 @@ const CampaignHub: React.FC<CampaignHubProps> = ({ customers, products, whatsapp
               <div className="flex items-center gap-3 p-3 bg-indigo-50 border border-indigo-100 rounded-lg">
                 <Clock size={16} className="text-indigo-600" />
                 <div>
-                  <p className="text-[10px] font-bold text-indigo-800 uppercase">Daily Sequential Mode</p>
-                  <p className="text-[9px] text-indigo-600 italic">One product per day (Automated)</p>
+                  <p className="text-[10px] font-bold text-indigo-800 uppercase">Daily Batch Mode Enabled</p>
+                  <p className="text-[9px] text-indigo-600 italic">Sequential: 1 Product Per 24h</p>
                 </div>
               </div>
             )}
@@ -185,12 +195,12 @@ const CampaignHub: React.FC<CampaignHubProps> = ({ customers, products, whatsapp
             {isCampaignRunning ? (
               <>
                 <Loader2 className="animate-spin" size={20} />
-                Orchestrating Phase {currentProductIndex}...
+                Phase {currentProductIndex} / {products.length}...
               </>
             ) : (
               <>
                 <Play size={20} fill="currentColor" />
-                Initiate Multi-Agent Mission
+                Initiate Delegated Mission
               </>
             )}
           </button>
@@ -200,7 +210,7 @@ const CampaignHub: React.FC<CampaignHubProps> = ({ customers, products, whatsapp
           <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm animate-in fade-in slide-in-from-bottom-4">
              <div className="flex items-center gap-2 mb-4 border-b border-slate-50 pb-3">
                <Package size={16} className="text-indigo-600" />
-               <h3 className="text-sm font-bold text-slate-800 truncate">Live Creative: {activeProduct.name}</h3>
+               <h3 className="text-sm font-bold text-slate-800 truncate">Agent Output: {activeProduct.name}</h3>
              </div>
              <div className="space-y-3">
                {activeProduct.image_url && (
@@ -223,12 +233,12 @@ const CampaignHub: React.FC<CampaignHubProps> = ({ customers, products, whatsapp
           <div className="flex justify-between items-center mb-6 border-b border-slate-800 pb-4">
              <h2 className="text-slate-500 font-mono flex items-center gap-2 text-[10px] tracking-widest uppercase">
                <div className={`w-1.5 h-1.5 rounded-full ${isCampaignRunning ? 'bg-indigo-500 animate-pulse' : 'bg-slate-600'}`}></div>
-               MULTI_AGENT_COMMAND_LOGS
+               MULTI_AGENT_PROTOCOL_CONSOLE
              </h2>
              {isCampaignRunning && (
                 <div className="flex gap-4 font-mono text-[10px]">
-                  <span className="text-emerald-400 tracking-tighter">DISPATCHED: {completedMessages}</span>
-                  <span className="text-rose-400 tracking-tighter">API_ERROR: {failedMessages}</span>
+                  <span className="text-emerald-400 tracking-tighter uppercase">SUCCESS: {completedMessages}</span>
+                  <span className="text-rose-400 tracking-tighter uppercase">ERRORS: {failedMessages}</span>
                 </div>
              )}
           </div>
@@ -237,13 +247,14 @@ const CampaignHub: React.FC<CampaignHubProps> = ({ customers, products, whatsapp
             {logs.length === 0 && (
                <div className="h-full flex flex-col items-center justify-center text-slate-700 font-mono italic text-xs text-center">
                  <ShieldCheck size={32} className="mb-3 opacity-5" />
-                 Ready for mission deployment.<br/>
-                 <span className="text-[9px] opacity-30 mt-1 block tracking-[0.2em] font-normal uppercase">Enterprise AdGenius Protocols 2.0</span>
+                 MANAGER: Standby for command.<br/>
+                 <span className="text-[9px] opacity-30 mt-1 block tracking-[0.2em] font-normal uppercase">AdGenius Orchestrator v2.4</span>
                </div>
             )}
             {logs.map((log, i) => (
               <div key={i} className={`p-3 rounded border flex gap-3 transition-all animate-in slide-in-from-left-2 ${
                 log.status === 'error' ? 'bg-rose-950/20 border-rose-900/40' :
+                log.status === 'pending' ? 'bg-slate-800/20 border-slate-700 opacity-60' :
                 log.agent === 'Manager' ? 'bg-indigo-950/20 border-indigo-900/40' : 
                 log.agent === 'Creative Agent' ? 'bg-emerald-950/20 border-emerald-900/40' :
                 'bg-slate-800/50 border-slate-700'
@@ -251,8 +262,8 @@ const CampaignHub: React.FC<CampaignHubProps> = ({ customers, products, whatsapp
                 <div className="mt-0.5 shrink-0">
                   {log.status === 'error' ? <AlertCircle size={14} className="text-rose-400" /> :
                    log.agent === 'Manager' ? <ShieldAlert size={14} className="text-indigo-400" /> : 
-                   log.agent === 'Creative Agent' ? <Package size={14} className="text-emerald-400" /> :
-                   <Users size={14} className="text-amber-400" />}
+                   log.agent === 'Creative Agent' ? <MessageCircle size={14} className="text-emerald-400" /> :
+                   <Send size={14} className="text-amber-400" />}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5">
@@ -263,7 +274,7 @@ const CampaignHub: React.FC<CampaignHubProps> = ({ customers, products, whatsapp
                     }`}>
                       {log.agent}
                     </span>
-                    <span className="text-[8px] text-slate-600 font-mono">{log.timestamp.toLocaleTimeString()}</span>
+                    <span className="text-[8px] text-slate-600 font-mono italic">[{log.timestamp.toLocaleTimeString()}]</span>
                   </div>
                   <p className={`text-[11px] leading-relaxed font-mono ${log.status === 'error' ? 'text-rose-200' : 'text-slate-300'}`}>
                     {log.message}
