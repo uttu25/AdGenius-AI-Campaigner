@@ -226,9 +226,24 @@ const App: React.FC = () => {
 
         {activeTab === 'dashboard' && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <StatCard icon={<Users className="text-blue-600" />} label="Database Capacity" value={customers.length} color="blue" />
-            <StatCard icon={<Package className="text-emerald-600" />} label="Portfolio Size" value={products.length} color="emerald" />
-            <StatCard icon={<History className="text-indigo-600" />} label="Missions Run" value={history.length} color="indigo" />
+            <StatCard 
+              icon={<Users className="text-blue-600" />} 
+              label="Customer records selected" 
+              value={selectedCustomerIds.size} 
+              color="blue" 
+            />
+            <StatCard 
+              icon={<Package className="text-emerald-600" />} 
+              label="Number of products selected" 
+              value={selectedProductIds.size} 
+              color="emerald" 
+            />
+            <StatCard 
+              icon={<History className="text-indigo-600" />} 
+              label="Missions Run" 
+              value={history.length} 
+              color="indigo" 
+            />
             
             <div className={`p-4 rounded-xl border flex flex-col justify-center gap-1 ${isWhatsAppConfigured ? 'bg-emerald-50 border-emerald-100' : 'bg-rose-50 border-rose-100'}`}>
                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">WhatsApp API Link</span>
@@ -324,8 +339,8 @@ const NavItem: React.FC<{ icon: React.ReactNode, label: string, active: boolean,
 const StatCard: React.FC<{ icon: React.ReactNode, label: string, value: number, color: string }> = ({ icon, label, value, color }) => (
   <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
     <div className={`p-3 rounded-lg bg-${color}-50`}>{icon}</div>
-    <div>
-      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">{label}</p>
+    <div className="min-w-0 flex-1">
+      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5 truncate">{label}</p>
       <p className="text-xl font-bold text-slate-800 leading-none">{value.toLocaleString()}</p>
     </div>
   </div>

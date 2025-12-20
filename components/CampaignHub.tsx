@@ -53,6 +53,19 @@ const CampaignHub: React.FC<CampaignHubProps> = ({ customers, products, whatsapp
         if (currentUser.autoScheduleDaily && i > 0) {
           const scheduleDay = i + 1;
           addLog('Manager', `SCHEDULING: [${product.name}] queued for automated delivery on DAY ${scheduleDay}.`, 'pending');
+          
+          // Register the scheduled item in history so the count matches selection exactly
+          onCampaignFinished({
+            id: `c-sched-${Date.now()}-${i}`,
+            timestamp: new Date(),
+            productName: product.name,
+            totalRecords: 0,
+            successCount: 0,
+            failureCount: 0,
+            adCopy: "",
+            channel: 'WhatsApp'
+          });
+          
           continue; 
         }
 
