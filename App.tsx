@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
-import { LayoutDashboard, Users, Package, Settings, MessageSquarePlus, Megaphone, History, User, X, CheckCircle2, AlertCircle, ShieldCheck, Clock, MessageSquare } from 'lucide-react';
+import { LayoutDashboard, Users, Package, Settings, MessageSquarePlus, Megaphone, History, User, X, CheckCircle2, AlertCircle, ShieldCheck, Clock, MessageSquare, AlertTriangle, LogOut, UserMinus } from 'lucide-react';
 import { Customer, Product, FilterOptions, WhatsAppConfig, GmailConfig, CampaignRecord, User as UserType } from './types';
 import TemplateButtons from './components/TemplateButtons';
 import CSVImport from './components/CSVImport';
@@ -355,13 +355,37 @@ const App: React.FC = () => {
             <WhatsAppSettings 
               config={whatsappConfig} 
               setConfig={setWhatsappConfig} 
-              onLogout={() => setCurrentUser(null)} 
-              onDeleteUserId={() => setWhatsappConfig(p => ({ ...p, businessAccountId: '' }))} 
             />
             <GmailSettings 
               config={gmailConfig}
               setConfig={setGmailConfig}
             />
+            
+            {/* Reordered Danger Zone - Now at bottom of API Gateways */}
+            <div className="bg-white p-6 rounded-xl border border-rose-100 shadow-sm border-t-4 border-t-rose-500">
+              <h3 className="text-lg font-bold text-rose-800 mb-2 flex items-center gap-2">
+                <AlertTriangle size={20} />
+                Danger Zone
+              </h3>
+              <p className="text-sm text-slate-500 mb-6">These actions are destructive and will reset your current session configuration.</p>
+              
+              <div className="flex flex-col sm:flex-row gap-4">
+                <button
+                  onClick={() => setCurrentUser(null)}
+                  className="flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold transition-all"
+                >
+                  <LogOut size={18} />
+                  Logout from Session
+                </button>
+                <button
+                  onClick={() => setWhatsappConfig(p => ({ ...p, businessAccountId: '' }))}
+                  className="flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 font-semibold transition-all border border-rose-200"
+                >
+                  <UserMinus size={18} />
+                  Delete Business User ID
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
