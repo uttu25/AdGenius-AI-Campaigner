@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
-import { LayoutDashboard, Users, Package, Settings, MessageSquarePlus, Megaphone, History, User, X, CheckCircle2, AlertCircle, ShieldCheck, Clock } from 'lucide-react';
+import { LayoutDashboard, Users, Package, Settings, MessageSquarePlus, Megaphone, History, User, X, CheckCircle2, AlertCircle, ShieldCheck, Clock, MessageSquare } from 'lucide-react';
 import { Customer, Product, FilterOptions, WhatsAppConfig, GmailConfig, CampaignRecord, User as UserType } from './types';
 import TemplateButtons from './components/TemplateButtons';
 import CSVImport from './components/CSVImport';
@@ -13,8 +13,9 @@ import GmailSettings from './components/GmailSettings';
 import CampaignHistory from './components/CampaignHistory';
 import AuthPage from './components/AuthPage';
 import GeneralSettings from './components/GeneralSettings';
+import Feedback from './components/Feedback';
 
-type AppTab = 'dashboard' | 'customers' | 'products' | 'campaign' | 'history' | 'api-settings' | 'general-settings';
+type AppTab = 'dashboard' | 'customers' | 'products' | 'campaign' | 'history' | 'api-settings' | 'general-settings' | 'feedback';
 
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<UserType | null>(null);
@@ -168,6 +169,7 @@ const App: React.FC = () => {
           <NavItem icon={<Package size={20} />} label="Products" active={activeTab === 'products'} onClick={() => setActiveTab('products')} />
           <NavItem icon={<MessageSquarePlus size={20} />} label="AI Campaign" active={activeTab === 'campaign'} onClick={() => setActiveTab('campaign')} />
           <NavItem icon={<History size={20} />} label="Past Missions" active={activeTab === 'history'} onClick={() => setActiveTab('history')} />
+          <NavItem icon={<MessageSquare size={20} />} label="Feedback" active={activeTab === 'feedback'} onClick={() => setActiveTab('feedback')} />
         </nav>
 
         {hasAnySelection && (
@@ -227,6 +229,7 @@ const App: React.FC = () => {
               {activeTab === 'history' && 'Operational History'}
               {activeTab === 'api-settings' && 'Cloud Gateways Configuration'}
               {activeTab === 'general-settings' && 'Enterprise Account'}
+              {activeTab === 'feedback' && 'Support & Feedback'}
             </h2>
           </div>
           {(activeTab === 'dashboard' || activeTab === 'history') && <TemplateButtons />}
@@ -361,6 +364,8 @@ const App: React.FC = () => {
             onDeleteAccount={() => setCurrentUser(null)} 
           />
         )}
+
+        {activeTab === 'feedback' && <Feedback />}
       </main>
     </div>
   );
