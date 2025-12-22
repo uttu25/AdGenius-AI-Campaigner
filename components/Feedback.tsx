@@ -4,7 +4,7 @@ import { MessageSquare, Mail, Copy, Check, Send } from 'lucide-react';
 
 const Feedback: React.FC = () => {
   const [copied, setCopied] = useState(false);
-  const email = "utkarsh.uk.singh@gmail.com";
+  const email = "utkarshuksingh@gmail.com";
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(email);
