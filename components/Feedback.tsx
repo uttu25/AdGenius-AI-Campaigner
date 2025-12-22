@@ -12,6 +12,9 @@ const Feedback: React.FC = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  // Gmail-specific compose link
+  const gmailComposeUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${email}`;
+
   return (
     <div className="max-w-2xl mx-auto space-y-8 animate-in fade-in duration-500">
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
@@ -56,7 +59,9 @@ const Feedback: React.FC = () => {
 
           <div className="pt-8 border-t border-slate-50">
             <a 
-              href={`mailto:${email}`}
+              href={gmailComposeUrl}
+              target="_blank"
+              rel="noopener noreferrer"
               className="inline-flex items-center gap-2 bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 active:scale-95"
             >
               <Send size={18} />
