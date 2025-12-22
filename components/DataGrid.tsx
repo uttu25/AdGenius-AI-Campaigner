@@ -6,7 +6,7 @@ import { Trash2, User, Package, CheckSquare, Square, ChevronLeft, ChevronRight, 
 interface DataGridProps {
   data: Customer[] | Product[];
   type: 'customer' | 'product';
-  onDelete?: (idx: number) => void;
+  onDelete?: (id: string) => void;
   selectedIds: Set<string>;
   onToggleSelection: (id: string) => void;
   onToggleAll: (selectAll: boolean) => void;
@@ -64,6 +64,7 @@ const DataGrid: React.FC<DataGridProps> = ({
                 <th className="px-4 py-3 w-10 text-center">
                   {showSelectAll ? (
                     <button 
+                      type="button"
                       onClick={() => onToggleAll(!allFilteredSelected)}
                       className="text-slate-400 hover:text-indigo-600 transition-colors mx-auto block"
                     >
@@ -93,13 +94,13 @@ const DataGrid: React.FC<DataGridProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {paginatedData.map((item, idx) => {
+              {paginatedData.map((item) => {
                 const isSelected = selectedIds.has(item.id);
-                const actualIdx = startIndex + idx;
                 return (
                   <tr key={item.id} className={`transition-all duration-200 ${isSelected ? 'bg-indigo-50/40' : 'hover:bg-slate-50/30'}`}>
                     <td className="px-4 py-3 text-center">
                       <button 
+                        type="button"
                         onClick={() => handleSelection(item.id)}
                         className={`transition-colors mx-auto block ${isSelected ? 'text-indigo-600' : 'text-slate-300 hover:text-slate-400'}`}
                       >
@@ -153,7 +154,14 @@ const DataGrid: React.FC<DataGridProps> = ({
                     )}
                     <td className="px-4 py-3 text-right">
                       {onDelete && (
-                        <button onClick={() => onDelete(actualIdx)} className="p-1 hover:bg-rose-50 rounded text-slate-300 hover:text-rose-500 transition-colors">
+                        <button 
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDelete(item.id);
+                          }} 
+                          className="p-1 hover:bg-rose-50 rounded text-slate-300 hover:text-rose-500 transition-all hover:scale-110"
+                        >
                           <Trash2 size={16} />
                         </button>
                       )}
@@ -205,6 +213,7 @@ const DataGrid: React.FC<DataGridProps> = ({
 
 const PaginationButton: React.FC<{ onClick: () => void, disabled: boolean, icon: React.ReactNode }> = ({ onClick, disabled, icon }) => (
   <button
+    type="button"
     onClick={onClick}
     disabled={disabled}
     className={`p-1 rounded-md transition-all ${

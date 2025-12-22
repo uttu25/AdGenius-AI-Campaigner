@@ -120,6 +120,34 @@ const App: React.FC = () => {
     });
   };
 
+  const handleClearCustomers = () => {
+    setCustomers([]);
+    setSelectedCustomerIds(new Set());
+  };
+
+  const handleClearProducts = () => {
+    setProducts([]);
+    setSelectedProductIds(new Set());
+  };
+
+  const handleDeleteCustomer = (id: string) => {
+    setCustomers(prev => prev.filter(c => c.id !== id));
+    setSelectedCustomerIds(prev => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  };
+
+  const handleDeleteProduct = (id: string) => {
+    setProducts(prev => prev.filter(p => p.id !== id));
+    setSelectedProductIds(prev => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  };
+
   const toggleDailyScheduling = () => {
     if (currentUser) {
       const newMode = !currentUser.autoScheduleDaily;
@@ -288,6 +316,8 @@ const App: React.FC = () => {
               <CSVImport 
                 onCustomerImport={(data) => setCustomers(prev => [...prev, ...data])} 
                 onProductImport={(data) => setProducts(prev => [...prev, ...data])} 
+                onClearCustomers={handleClearCustomers}
+                onClearProducts={handleClearProducts}
                 currentCustomerCount={customers.length}
                 currentProductCount={products.length}
               />
@@ -298,7 +328,14 @@ const App: React.FC = () => {
         {activeTab === 'customers' && (
           <div className="space-y-6">
             <SegmentationFilter filters={filters} setFilters={setFilters} cities={uniqueCities} states={uniqueStates} />
-            <DataGrid data={filteredCustomers} type="customer" selectedIds={selectedCustomerIds} onToggleSelection={toggleCustomerSelection} onToggleAll={toggleAllFilteredCustomers} />
+            <DataGrid 
+              data={filteredCustomers} 
+              type="customer" 
+              selectedIds={selectedCustomerIds} 
+              onToggleSelection={toggleCustomerSelection} 
+              onToggleAll={toggleAllFilteredCustomers} 
+              onDelete={handleDeleteCustomer}
+            />
           </div>
         )}
 
@@ -333,6 +370,7 @@ const App: React.FC = () => {
               onToggleSelection={toggleProductSelection} 
               onToggleAll={toggleAllFilteredProducts}
               isDailyMode={currentUser.autoScheduleDaily}
+              onDelete={handleDeleteProduct}
             />
           </div>
         )}
@@ -361,7 +399,7 @@ const App: React.FC = () => {
               setConfig={setGmailConfig}
             />
             
-            {/* Reordered Danger Zone - Now at bottom of API Gateways */}
+            {/* Danger Zone */}
             <div className="bg-white p-6 rounded-xl border border-rose-100 shadow-sm border-t-4 border-t-rose-500">
               <h3 className="text-lg font-bold text-rose-800 mb-2 flex items-center gap-2">
                 <AlertTriangle size={20} />
