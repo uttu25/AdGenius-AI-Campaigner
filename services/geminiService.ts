@@ -1,11 +1,9 @@
-
 import { GoogleGenAI } from "@google/genai";
 import { Product, Customer } from "../types.ts";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
 export const generateAdCopy = async (product: Product, companyName?: string): Promise<string> => {
   try {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const brandContext = companyName ? `This advertisement is for "${companyName}". Ensure the tone aligns with this brand name.` : "This is a professional business advertisement.";
     
     const response = await ai.models.generateContent({
@@ -36,6 +34,7 @@ export const generateAdCopy = async (product: Product, companyName?: string): Pr
 
 export const generateProductImage = async (product: Product, companyName?: string): Promise<string | undefined> => {
   try {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const brandContext = companyName ? `aligned with the visual identity of "${companyName}"` : "";
     
     const response = await ai.models.generateContent({
@@ -54,11 +53,16 @@ export const generateProductImage = async (product: Product, companyName?: strin
 
     if (response.candidates?.[0]?.content?.parts) {
       for (const part of response.candidates[0].content.parts) {
-        if (part.inlineData) {
-          return `data:image/png;base64,${part.inlineData.data}`;
+        // Specifically look for the inlineData part containing the base64 image
+        if (part.inlineData && part.inlineData.data) {
+          return `data:${part.inlineData.mimeType || 'image/png'};base64,${part.inlineData.data}`;
+        }
+        if (part.text) {
+          console.debug("Model returned text instead of image:", part.text);
         }
       }
     }
+    console.warn("Gemini Image Agent: No image data found in response parts.");
   } catch (error) {
     console.error("Gemini Image Agent Error:", error);
   }
