@@ -43,6 +43,8 @@ const App: React.FC = () => {
   });
 
   const [productSearch, setProductSearch] = useState('');
+  const [productWhatsappFilter, setProductWhatsappFilter] = useState('');
+  const [productGmailFilter, setProductGmailFilter] = useState('');
 
   // Selection States
   const [selectedCustomerIds, setSelectedCustomerIds] = useState<Set<string>>(new Set());
@@ -59,10 +61,13 @@ const App: React.FC = () => {
   }, [customers, filters]);
 
   const filteredProducts = useMemo(() => {
-    if (!productSearch.trim()) return products;
-    const lowerSearch = productSearch.toLowerCase();
-    return products.filter(p => p.name.toLowerCase().includes(lowerSearch));
-  }, [products, productSearch]);
+    return products.filter(p => {
+      const searchMatch = !productSearch.trim() || p.name.toLowerCase().includes(productSearch.toLowerCase());
+      const whatsappMatch = !productWhatsappFilter || p.whatsapp_opt_in === productWhatsappFilter;
+      const gmailMatch = !productGmailFilter || p.gmail_opt_in === productGmailFilter;
+      return searchMatch && whatsappMatch && gmailMatch;
+    });
+  }, [products, productSearch, productWhatsappFilter, productGmailFilter]);
 
   const uniqueCities = Array.from(new Set(customers.map(c => c.city))).filter(Boolean);
   const uniqueStates = Array.from(new Set(customers.map(c => c.state))).filter(Boolean);
@@ -300,7 +305,14 @@ const App: React.FC = () => {
         {activeTab === 'products' && (
           <div className="space-y-6">
             <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-              <ProductFilter searchTerm={productSearch} onSearchChange={setProductSearch} />
+              <ProductFilter 
+                searchTerm={productSearch} 
+                onSearchChange={setProductSearch}
+                whatsappOptIn={productWhatsappFilter}
+                onWhatsappOptInChange={setProductWhatsappFilter}
+                gmailOptIn={productGmailFilter}
+                onGmailOptInChange={setProductGmailFilter}
+              />
               <div className="flex items-center gap-3 p-4 bg-white border border-slate-200 rounded-xl shadow-sm h-full flex-shrink-0">
                 <div className="flex flex-col">
                   <span className="text-xs font-bold text-slate-700">Daily Batch Mode</span>

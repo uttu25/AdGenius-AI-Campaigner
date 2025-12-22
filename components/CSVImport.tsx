@@ -43,7 +43,7 @@ const CSVImport: React.FC<CSVImportProps> = ({ onCustomerImport, onProductImport
             name: row[0] || '',
             mobile_number: row[1] || '',
             age: parseInt(row[2]) || 0,
-            email: row[3] || '', // Mandatory email column
+            email: row[3] || '', 
             sex: (row[4] as any) || 'Other',
             city: row[5] || '',
             state: row[6] || '',
@@ -67,6 +67,8 @@ const CSVImport: React.FC<CSVImportProps> = ({ onCustomerImport, onProductImport
             description: row[1] || '',
             price: row[2] || '',
             url: row[3] || '', 
+            whatsapp_opt_in: row[4] || 'N',
+            gmail_opt_in: row[5] || 'N',
           })).filter(p => p.name && p.description && p.price && p.url);
 
           if (products.length > availableSlots) {
@@ -115,7 +117,7 @@ const CSVImport: React.FC<CSVImportProps> = ({ onCustomerImport, onProductImport
           <div className="flex flex-col items-center justify-center pt-5 pb-6">
             <Upload className="w-8 h-8 mb-3 text-slate-400" />
             <p className="mb-2 text-sm text-slate-500"><span className="font-semibold">Upload Product CSV</span></p>
-            <p className="text-[10px] text-slate-400 uppercase tracking-tighter">Required: Name, Desc, Price, URL</p>
+            <p className="text-[10px] text-slate-400 uppercase tracking-tighter">Required: Name, Desc, Price, URL, Opt-ins</p>
           </div>
           <input type="file" className="hidden" accept=".csv" onChange={(e) => handleFileChange(e, 'product')} />
         </label>
@@ -124,7 +126,7 @@ const CSVImport: React.FC<CSVImportProps> = ({ onCustomerImport, onProductImport
       <div className="md:col-span-2 p-3 bg-indigo-50 border border-indigo-100 rounded-lg flex gap-3">
         <AlertCircle className="text-indigo-500 flex-shrink-0" size={18} />
         <p className="text-[11px] text-indigo-700 leading-tight">
-          <strong>Data Requirements:</strong> Customer CSV requires a mandatory email in the 4th column. Product CSV requires a URL in the 4th column.
+          <strong>Data Requirements:</strong> Customer CSV requires email in the 4th column. Product CSV can include WhatsApp and Gmail opt-in flags (Y/N) in columns 5 and 6.
         </p>
       </div>
     </div>

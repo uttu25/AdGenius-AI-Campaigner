@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { Customer, Product } from '../types';
-// Added MessageCircle to the imports from lucide-react to fix compilation error on line 114
 import { Trash2, User, Package, CheckSquare, Square, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, AlertCircle, Link as LinkIcon, Mail, MessageCircle } from 'lucide-react';
 
 interface DataGridProps {
@@ -85,6 +84,7 @@ const DataGrid: React.FC<DataGridProps> = ({
                   <>
                     <th className="px-4 py-3">Campaign Product</th>
                     <th className="px-4 py-3">Description</th>
+                    <th className="px-4 py-3">Opt-in Status</th>
                     <th className="px-4 py-3">Pricing</th>
                     <th className="px-4 py-3">Target URL</th>
                   </>
@@ -136,6 +136,12 @@ const DataGrid: React.FC<DataGridProps> = ({
                           {(item as Product).name}
                         </td>
                         <td className="px-4 py-3 text-slate-500 truncate max-w-[150px] text-xs">{(item as Product).description}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase ${(item as Product).whatsapp_opt_in === 'Y' ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-400 border border-slate-200'}`}>WA: {(item as Product).whatsapp_opt_in || 'N'}</span>
+                            <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase ${(item as Product).gmail_opt_in === 'Y' ? 'bg-rose-100 text-rose-700 border border-rose-200' : 'bg-slate-100 text-slate-400 border border-slate-200'}`}>GM: {(item as Product).gmail_opt_in || 'N'}</span>
+                          </div>
+                        </td>
                         <td className="px-4 py-3 font-bold text-indigo-600">{(item as Product).price}</td>
                         <td className="px-4 py-3">
                            <a href={(item as Product).url} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-xs text-indigo-500 hover:text-indigo-700 font-medium">
