@@ -35,19 +35,21 @@ export const generateAdCopy = async (product: Product, companyName?: string): Pr
 
 export const generateProductImage = async (product: Product, companyName?: string): Promise<string | undefined> => {
   try {
+    // Create a new instance right before the call to ensure we have the latest selected key
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const brandContext = companyName ? `aligned with the visual identity of "${companyName}"` : "";
     
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-image', // Use the standard, reliable flash image model
+      model: 'gemini-3-pro-image-preview',
       contents: {
         parts: [
-          { text: `A clean, professional studio product shot ${brandContext}. Product: ${product.name}. Theme: ${product.description}. Commercial lighting, centered, white background.` }
+          { text: `A clean, professional studio product shot ${brandContext}. Product: ${product.name}. Theme: ${product.description}. 4k resolution, centered, white background, commercial lighting.` }
         ]
       },
       config: {
         imageConfig: {
-          aspectRatio: "1:1"
+          aspectRatio: "1:1",
+          imageSize: "1K"
         }
       }
     });
@@ -61,9 +63,10 @@ export const generateProductImage = async (product: Product, companyName?: strin
     }
   } catch (error: any) {
     console.error("Gemini Image Agent Error:", error);
-    // Extract the clean message from the error object if possible
-    const message = error.message || "Unknown API Error";
-    throw new Error(`Failed to call the Gemini API: ${message}`);
+    // If the error is about missing entity, it might mean the key selected doesn't support the model
+    if (error.message?.includes("Requested entity was not found")) {
+      console.warn("Model access denied. The selected API key may not support this generative model.");
+    }
   }
   return undefined;
 };

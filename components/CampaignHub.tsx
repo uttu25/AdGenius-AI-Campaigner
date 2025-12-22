@@ -1,20 +1,21 @@
 
 import React, { useState, useEffect } from 'react';
-import { Play, Loader2, ShieldAlert, Users, Package, AlertCircle, MessageCircle, ShieldCheck, Clock, Link as LinkIcon, Building2, Send, Mail, Image as ImageIcon, Key, XCircle } from 'lucide-react';
+import { Play, Loader2, ShieldAlert, Users, Package, AlertCircle, MessageCircle, ShieldCheck, Clock, Link as LinkIcon, Building2, Send, Mail, Image as ImageIcon, Key } from 'lucide-react';
 import { Customer, Product, CampaignStep, WhatsAppConfig, GmailConfig, CampaignRecord, User as UserType, DeliveryChannel } from '../types.ts';
 import { generateAdCopy, generateProductImage, personalizeMessage } from '../services/geminiService.ts';
 import { sendWhatsAppMessage } from '../services/whatsappService.ts';
 import { sendEmailMessage } from '../services/gmailService.ts';
 
 // Add global type for AI Studio
-// Fix: All declarations of 'aistudio' must have identical modifiers.
-// Simplified and made optional to align with guarded usage and environment-injected properties.
+// Fix: Use the AIStudio interface to avoid type conflicts in global declaration.
+// All declarations of 'aistudio' must have identical modifiers and types.
 declare global {
+  interface AIStudio {
+    hasSelectedApiKey: () => Promise<boolean>;
+    openSelectKey: () => Promise<void>;
+  }
   interface Window {
-    aistudio?: {
-      hasSelectedApiKey: () => Promise<boolean>;
-      openSelectKey: () => Promise<void>;
-    };
+    aistudio: AIStudio;
   }
 }
 
@@ -36,7 +37,6 @@ const CampaignHub: React.FC<CampaignHubProps> = ({ customers, products, whatsapp
   const [currentProductIndex, setCurrentProductIndex] = useState(0);
   const [deliveryChannel, setDeliveryChannel] = useState<DeliveryChannel>('WhatsApp');
   const [hasApiKey, setHasApiKey] = useState<boolean>(true);
-  const [generationError, setGenerationError] = useState<string | null>(null);
 
   const PROTECTION_LIMIT = 1000;
 
@@ -53,7 +53,7 @@ const CampaignHub: React.FC<CampaignHubProps> = ({ customers, products, whatsapp
   const handleOpenSelectKey = async () => {
     if (window.aistudio) {
       await window.aistudio.openSelectKey();
-      setHasApiKey(true);
+      setHasApiKey(true); // Assume success after triggering the dialog
     }
   };
 
@@ -62,6 +62,7 @@ const CampaignHub: React.FC<CampaignHubProps> = ({ customers, products, whatsapp
   };
 
   const startCampaign = async () => {
+    // Check key again before starting
     if (window.aistudio) {
       const isKeySelected = await window.aistudio.hasSelectedApiKey();
       if (!isKeySelected) {
@@ -72,7 +73,6 @@ const CampaignHub: React.FC<CampaignHubProps> = ({ customers, products, whatsapp
     setLogs([]);
     setCompletedMessages(0);
     setFailedMessages(0);
-    setGenerationError(null);
     setIsCampaignRunning(true);
 
     try {
@@ -121,23 +121,13 @@ const CampaignHub: React.FC<CampaignHubProps> = ({ customers, products, whatsapp
         await new Promise(r => setTimeout(r, 600));
 
         addLog('Creative Agent', `Formulating visual identity and high-conversion copy...`, 'processing');
+        const adCopy = await generateAdCopy(product, currentUser.companyName);
         
-        let adCopy = "";
-        let adImage = undefined;
+        // Use the upgraded Pro model for images
+        const adImage = await generateProductImage(product, currentUser.companyName);
         
-        try {
-          adCopy = await generateAdCopy(product, currentUser.companyName);
-          adImage = await generateProductImage(product, currentUser.companyName);
-          setActiveProduct({ ...product, ad_copy: adCopy, image_url: adImage });
-          addLog('Creative Agent', `Campaign assets finalized. Reporting success to Manager.`, 'completed');
-        } catch (creativeErr: any) {
-          const errMsg = creativeErr.message || "Creative synthesis failed.";
-          setGenerationError(errMsg);
-          addLog('Creative Agent', `Error: ${errMsg}`, 'error');
-          // Don't throw, allow campaign to attempt copy-only if possible or stop
-          if (!adCopy) throw creativeErr;
-        }
-
+        setActiveProduct({ ...product, ad_copy: adCopy, image_url: adImage });
+        addLog('Creative Agent', `Campaign assets finalized. Reporting success to Manager.`, 'completed');
         await new Promise(r => setTimeout(r, 600));
 
         // 2. Delivery Orchestration
@@ -169,8 +159,8 @@ const CampaignHub: React.FC<CampaignHubProps> = ({ customers, products, whatsapp
             setFailedMessages(prev => prev + 1);
             if (result.error) {
               errorsEncountered.add(result.error);
-              if (result.error.toLowerCase().includes("permission denied") || result.error.includes("Requested entity was not found")) {
-                setHasApiKey(false);
+              if (result.error.includes("Requested entity was not found")) {
+                setHasApiKey(false); // Flag for re-selection
               }
             }
           }
@@ -220,14 +210,14 @@ const CampaignHub: React.FC<CampaignHubProps> = ({ customers, products, whatsapp
               <div className="space-y-2">
                 <p className="text-xs font-bold uppercase tracking-wider">Cloud Access Required</p>
                 <p className="text-[10px] text-indigo-100 leading-tight">
-                  The selected API key may have expired or lacks permissions for high-performance generative models.
+                  High-performance AI generative models (Images/Video) require a linked API key from a paid GCP project.
                 </p>
                 <div className="flex flex-col gap-2 pt-1">
                   <button 
                     onClick={handleOpenSelectKey}
                     className="w-full py-1.5 bg-white text-indigo-600 rounded-lg text-[10px] font-black uppercase hover:bg-indigo-50 transition-colors"
                   >
-                    Refresh API Key
+                    Select API Key
                   </button>
                   <a 
                     href="https://ai.google.dev/gemini-api/docs/billing" 
@@ -235,7 +225,7 @@ const CampaignHub: React.FC<CampaignHubProps> = ({ customers, products, whatsapp
                     rel="noreferrer" 
                     className="text-[9px] text-indigo-200 underline text-center"
                   >
-                    Billing & Quotas
+                    Billing Documentation
                   </a>
                 </div>
               </div>
@@ -250,7 +240,7 @@ const CampaignHub: React.FC<CampaignHubProps> = ({ customers, products, whatsapp
               AI Manager
             </h2>
             <div className="flex items-center gap-1 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
-               <span className="text-[10px] font-bold text-emerald-600 uppercase">Agents Online</span>
+               <span className="text-[10px] font-bold text-emerald-600 uppercase">3 Agents Active</span>
             </div>
           </div>
 
@@ -321,20 +311,9 @@ const CampaignHub: React.FC<CampaignHubProps> = ({ customers, products, whatsapp
              {activeProduct.image_url ? (
                <img src={activeProduct.image_url} alt="Ad" className="w-full h-32 object-cover rounded-md mb-3 border border-slate-100 shadow-sm" />
              ) : (
-               <div className={`w-full h-32 rounded-md mb-3 border border-dashed flex items-center justify-center flex-col gap-2 p-4 text-center ${generationError ? 'bg-rose-50 border-rose-200' : 'bg-slate-50 border-slate-200'}`}>
-                  {generationError ? (
-                    <>
-                      <XCircle className="text-rose-400" size={24} />
-                      <span className="text-[10px] text-rose-600 uppercase font-black tracking-tight leading-tight">
-                        {generationError}
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <ImageIcon className="text-slate-300" size={24} />
-                      <span className="text-[10px] text-slate-400 uppercase font-bold tracking-tighter">Visual Generation Restricted</span>
-                    </>
-                  )}
+               <div className="w-full h-32 rounded-md mb-3 border border-dashed border-slate-200 bg-slate-50 flex items-center justify-center flex-col gap-2">
+                  <ImageIcon className="text-slate-300" size={24} />
+                  <span className="text-[10px] text-slate-400 uppercase font-bold tracking-tighter">Visual Generation Restricted</span>
                </div>
              )}
              <div className="text-[11px] text-slate-600 font-medium italic bg-slate-50 p-3 rounded border border-slate-100 max-h-40 overflow-y-auto leading-relaxed">
@@ -361,9 +340,9 @@ const CampaignHub: React.FC<CampaignHubProps> = ({ customers, products, whatsapp
           
           <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
             {logs.length === 0 && (
-               <div className="h-full flex flex-col items-center justify-center text-slate-700 font-mono text-xs italic text-center px-8">
+               <div className="h-full flex flex-col items-center justify-center text-slate-700 font-mono text-xs italic">
                  <ShieldCheck className="opacity-10 mb-2" size={32} />
-                 MANAGER: Standing by for operation launch. Ensure API Gateways are linked for live dispatch.
+                 MANAGER: Standing by for operation launch.
                </div>
             )}
             {logs.map((log, i) => (
