@@ -21,7 +21,7 @@ export const generateAdCopy = async (product: Product, companyName?: string): Pr
       1. Use engaging emojis appropriate for the product and brand.
       2. Integrate the pricing naturally.
       3. The Call to Action MUST feature the product link clearly.
-      4. Format specifically for WhatsApp mobile reading (bullet points, bold text).
+      4. Format specifically for WhatsApp mobile reading (bold text, bullet points).
       5. Explicitly mention "${companyName || 'our store'}" as the provider.
       6. Be concise but high-impact.`,
     });
@@ -29,46 +29,48 @@ export const generateAdCopy = async (product: Product, companyName?: string): Pr
     return response.text || "AI Agent could not formulate ad copy at this time.";
   } catch (error) {
     console.error("Gemini Creative Agent Error:", error);
-    throw new Error("Creative Agent offline. Please verify API key configuration.");
+    throw error;
   }
 };
 
-export const generateProductImage = async (product: Product, companyName?: string): Promise<string | undefined> => {
+/**
+ * Generates an actual product image using the Gemini image generation model.
+ * Returns the Base64 data of the generated image.
+ */
+export const generateProductImage = async (product: Product, companyName?: string): Promise<string> => {
   try {
-    // Create a new instance right before the call to ensure we have the latest selected key
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const brandContext = companyName ? `aligned with the visual identity of "${companyName}"` : "";
+    const brandContext = companyName ? `for the brand "${companyName}"` : "";
     
+    const prompt = `A professional, high-end commercial product photograph of ${product.name}. 
+    Context: ${product.description}. 
+    The product should be the focal point, featuring premium studio lighting, a clean minimalist background ${brandContext}, and a modern commercial aesthetic. 
+    High resolution, 4k, photorealistic.`;
+
     const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-image-preview',
+      model: 'gemini-2.5-flash-image',
       contents: {
-        parts: [
-          { text: `A clean, professional studio product shot ${brandContext}. Product: ${product.name}. Theme: ${product.description}. 4k resolution, centered, white background, commercial lighting.` }
-        ]
+        parts: [{ text: prompt }]
       },
       config: {
         imageConfig: {
-          aspectRatio: "1:1",
-          imageSize: "1K"
+          aspectRatio: "1:1"
         }
       }
     });
 
-    if (response.candidates?.[0]?.content?.parts) {
-      for (const part of response.candidates[0].content.parts) {
-        if (part.inlineData && part.inlineData.data) {
-          return `data:${part.inlineData.mimeType || 'image/png'};base64,${part.inlineData.data}`;
-        }
+    // Iterate through parts to find the image data
+    for (const part of response.candidates?.[0]?.content?.parts || []) {
+      if (part.inlineData) {
+        return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
       }
     }
+
+    throw new Error("No image data returned by the model.");
   } catch (error: any) {
-    console.error("Gemini Image Agent Error:", error);
-    // If the error is about missing entity, it might mean the key selected doesn't support the model
-    if (error.message?.includes("Requested entity was not found")) {
-      console.warn("Model access denied. The selected API key may not support this generative model.");
-    }
+    console.error("Gemini Image Generation Error:", error);
+    throw error;
   }
-  return undefined;
 };
 
 export const personalizeMessage = async (adCopy: string, customer: Customer): Promise<string> => {
