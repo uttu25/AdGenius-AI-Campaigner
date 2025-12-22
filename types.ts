@@ -3,7 +3,7 @@ export interface Customer {
   id: string;
   name: string;
   mobile_number: string;
-  email?: string;
+  email: string; // Now mandatory
   age: number;
   sex: 'Male' | 'Female' | 'Other';
   city: string;
@@ -21,7 +21,7 @@ export interface Product {
 }
 
 export interface CampaignStep {
-  agent: 'Manager' | 'Creative Agent' | 'Delivery Agent';
+  agent: 'Manager' | 'Creative Agent' | 'WhatsApp Agent' | 'Email Agent';
   message: string;
   status: 'pending' | 'processing' | 'completed' | 'error';
   timestamp: Date;
@@ -40,6 +40,15 @@ export interface WhatsAppConfig {
   businessAccountId: string;
 }
 
+export interface GmailConfig {
+  clientId: string;
+  clientSecret: string;
+  refreshToken: string;
+  userEmail: string;
+}
+
+export type DeliveryChannel = 'WhatsApp' | 'Email';
+
 export interface CampaignRecord {
   id: string;
   timestamp: Date;
@@ -49,8 +58,8 @@ export interface CampaignRecord {
   failureCount: number;
   adCopy: string;
   imageUrl?: string;
-  channel: 'WhatsApp';
-  failureReasons?: string[]; // Details about why messages failed
+  channel: DeliveryChannel;
+  failureReasons?: string[];
 }
 
 export interface User {
@@ -59,6 +68,6 @@ export interface User {
   isLoggedIn: boolean;
   isGoogleLinked: boolean;
   autoScheduleDaily: boolean;
-  logo?: string; // Company logo base64
-  companyName?: string; // Company name field
+  logo?: string;
+  companyName?: string;
 }

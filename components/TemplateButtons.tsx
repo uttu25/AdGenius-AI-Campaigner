@@ -16,12 +16,11 @@ const TemplateButtons: React.FC = () => {
   };
 
   const handleCustomerTemplate = () => {
-    const csvContent = "name,mobile_number,age,sex,city,state\nAjay Verma,9123456789,28,Male,Mumbai,Maharashtra\nPriya Singh,9876543210,24,Female,Delhi,Delhi";
+    const csvContent = "name,mobile_number,age,email,sex,city,state\nAjay Verma,9123456789,28,ajay@example.com,Male,Mumbai,Maharashtra\nPriya Singh,9876543210,24,priya@example.com,Female,Delhi,Delhi";
     downloadCSV('customer_template.csv', csvContent);
   };
 
   const handleProductTemplate = () => {
-    // Added product_url as a mandatory column
     const csvContent = "product_name,product_description,price,product_url\nWireless Headphones,Noise cancelling over-ear headphones,$199,https://example.com/headphones\nSmart Watch,Waterproof fitness tracker with GPS,$129,https://example.com/watch";
     downloadCSV('product_template.csv', csvContent);
   };

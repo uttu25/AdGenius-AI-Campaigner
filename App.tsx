@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { LayoutDashboard, Users, Package, Settings, MessageSquarePlus, Megaphone, History, User, X, CheckCircle2, AlertCircle, ShieldCheck, Clock } from 'lucide-react';
-import { Customer, Product, FilterOptions, WhatsAppConfig, CampaignRecord, User as UserType } from './types';
+import { Customer, Product, FilterOptions, WhatsAppConfig, GmailConfig, CampaignRecord, User as UserType } from './types';
 import TemplateButtons from './components/TemplateButtons';
 import CSVImport from './components/CSVImport';
 import DataGrid from './components/DataGrid';
@@ -9,6 +9,7 @@ import CampaignHub from './components/CampaignHub';
 import SegmentationFilter from './components/SegmentationFilter';
 import ProductFilter from './components/ProductFilter';
 import WhatsAppSettings from './components/WhatsAppSettings';
+import GmailSettings from './components/GmailSettings';
 import CampaignHistory from './components/CampaignHistory';
 import AuthPage from './components/AuthPage';
 import GeneralSettings from './components/GeneralSettings';
@@ -25,6 +26,12 @@ const App: React.FC = () => {
     accessToken: '',
     phoneNumberId: '',
     businessAccountId: ''
+  });
+  const [gmailConfig, setGmailConfig] = useState<GmailConfig>({
+    clientId: '',
+    clientSecret: '',
+    refreshToken: '',
+    userEmail: ''
   });
   
   const [filters, setFilters] = useState<FilterOptions>({
@@ -139,6 +146,7 @@ const App: React.FC = () => {
   };
 
   const isWhatsAppConfigured = !!(whatsappConfig.accessToken && whatsappConfig.phoneNumberId);
+  const isGmailConfigured = !!(gmailConfig.refreshToken && gmailConfig.userEmail);
 
   if (!currentUser) return <AuthPage onLogin={handleLogin} />;
 
@@ -189,7 +197,7 @@ const App: React.FC = () => {
         )}
 
         <div className="pt-6 border-t border-slate-100 space-y-1">
-           <NavItem icon={<Settings size={20} />} label="WhatsApp API" active={activeTab === 'api-settings'} onClick={() => setActiveTab('api-settings')} />
+           <NavItem icon={<Settings size={20} />} label="API Gateways" active={activeTab === 'api-settings'} onClick={() => setActiveTab('api-settings')} />
            <NavItem icon={<User size={20} />} label="Profile" active={activeTab === 'general-settings'} onClick={() => setActiveTab('general-settings')} />
            
            <div className="px-4 py-4 mt-4 bg-indigo-600 rounded-2xl flex items-center gap-3 shadow-lg border border-indigo-500 relative overflow-hidden group">
@@ -217,11 +225,11 @@ const App: React.FC = () => {
               {activeTab === 'products' && 'Product Portfolio'}
               {activeTab === 'campaign' && 'AI Mission Command'}
               {activeTab === 'history' && 'Operational History'}
-              {activeTab === 'api-settings' && 'WhatsApp Cloud Gateway'}
+              {activeTab === 'api-settings' && 'Cloud Gateways Configuration'}
               {activeTab === 'general-settings' && 'Enterprise Account'}
             </h2>
           </div>
-          <TemplateButtons />
+          {(activeTab === 'dashboard' || activeTab === 'history') && <TemplateButtons />}
         </header>
 
         {activeTab === 'dashboard' && (
@@ -245,15 +253,27 @@ const App: React.FC = () => {
               color="indigo" 
             />
             
-            <div className={`p-4 rounded-xl border flex flex-col justify-center gap-1 ${isWhatsAppConfigured ? 'bg-emerald-50 border-emerald-100' : 'bg-rose-50 border-rose-100'}`}>
-               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">WhatsApp API Link</span>
-               <div className="flex items-center gap-2">
-                 {isWhatsAppConfigured ? (
-                   <><CheckCircle2 size={14} className="text-emerald-600" /><span className="text-xs font-bold text-emerald-700">Verified</span></>
-                 ) : (
-                   <><AlertCircle size={14} className="text-rose-600" /><span className="text-xs font-bold text-rose-700">Disconnected</span></>
-                 )}
-               </div>
+            <div className="flex flex-col gap-2">
+              <div className={`px-4 py-2 rounded-xl border flex flex-col justify-center gap-0.5 ${isWhatsAppConfigured ? 'bg-emerald-50 border-emerald-100' : 'bg-rose-50 border-rose-100'}`}>
+                 <span className="text-[8px] font-bold text-slate-400 uppercase tracking-tight">WhatsApp API</span>
+                 <div className="flex items-center gap-1">
+                   {isWhatsAppConfigured ? (
+                     <><CheckCircle2 size={10} className="text-emerald-600" /><span className="text-[10px] font-bold text-emerald-700">Verified</span></>
+                   ) : (
+                     <><AlertCircle size={10} className="text-rose-600" /><span className="text-[10px] font-bold text-rose-700">Off</span></>
+                   )}
+                 </div>
+              </div>
+              <div className={`px-4 py-2 rounded-xl border flex flex-col justify-center gap-0.5 ${isGmailConfigured ? 'bg-emerald-50 border-emerald-100' : 'bg-rose-50 border-rose-100'}`}>
+                 <span className="text-[8px] font-bold text-slate-400 uppercase tracking-tight">Gmail API</span>
+                 <div className="flex items-center gap-1">
+                   {isGmailConfigured ? (
+                     <><CheckCircle2 size={10} className="text-emerald-600" /><span className="text-[10px] font-bold text-emerald-700">Verified</span></>
+                   ) : (
+                     <><AlertCircle size={10} className="text-rose-600" /><span className="text-[10px] font-bold text-rose-700">Off</span></>
+                   )}
+                 </div>
+              </div>
             </div>
 
             <div className="col-span-1 md:col-span-2 lg:col-span-4 mt-4">
@@ -307,13 +327,29 @@ const App: React.FC = () => {
             customers={customers.filter(c => selectedCustomerIds.has(c.id))} 
             products={products.filter(p => selectedProductIds.has(p.id))} 
             whatsappConfig={whatsappConfig}
+            gmailConfig={gmailConfig}
             currentUser={currentUser}
             onCampaignFinished={(rec) => setHistory(prev => [rec, ...prev])}
           />
         )}
 
         {activeTab === 'history' && <CampaignHistory history={history} />}
-        {activeTab === 'api-settings' && <WhatsAppSettings config={whatsappConfig} setConfig={setWhatsappConfig} onLogout={() => setCurrentUser(null)} onDeleteUserId={() => setWhatsappConfig(p => ({ ...p, businessAccountId: '' }))} />}
+        
+        {activeTab === 'api-settings' && (
+          <div className="space-y-8 max-w-4xl mx-auto">
+            <WhatsAppSettings 
+              config={whatsappConfig} 
+              setConfig={setWhatsappConfig} 
+              onLogout={() => setCurrentUser(null)} 
+              onDeleteUserId={() => setWhatsappConfig(p => ({ ...p, businessAccountId: '' }))} 
+            />
+            <GmailSettings 
+              config={gmailConfig}
+              setConfig={setGmailConfig}
+            />
+          </div>
+        )}
+
         {activeTab === 'general-settings' && (
           <GeneralSettings 
             userEmail={currentUser.email} 

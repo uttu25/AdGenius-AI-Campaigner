@@ -1,7 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { Customer, Product } from '../types';
-import { Trash2, User, Package, CheckSquare, Square, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, AlertCircle, Link as LinkIcon } from 'lucide-react';
+// Added MessageCircle to the imports from lucide-react to fix compilation error on line 114
+import { Trash2, User, Package, CheckSquare, Square, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, AlertCircle, Link as LinkIcon, Mail, MessageCircle } from 'lucide-react';
 
 interface DataGridProps {
   data: Customer[] | Product[];
@@ -76,7 +77,7 @@ const DataGrid: React.FC<DataGridProps> = ({
                 {type === 'customer' ? (
                   <>
                     <th className="px-4 py-3">Recipient Name</th>
-                    <th className="px-4 py-3">WhatsApp Number</th>
+                    <th className="px-4 py-3">Contact Channels</th>
                     <th className="px-4 py-3">Demographics</th>
                     <th className="px-4 py-3">Location</th>
                   </>
@@ -108,7 +109,18 @@ const DataGrid: React.FC<DataGridProps> = ({
                     {type === 'customer' ? (
                       <>
                         <td className="px-4 py-3 font-semibold text-slate-700">{(item as Customer).name}</td>
-                        <td className="px-4 py-3 font-mono text-slate-500">{(item as Customer).mobile_number}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-col gap-0.5">
+                             <span className="font-mono text-[10px] text-slate-500 flex items-center gap-1">
+                               <MessageCircle size={10} className="text-emerald-500" />
+                               {(item as Customer).mobile_number}
+                             </span>
+                             <span className="font-mono text-[10px] text-slate-500 flex items-center gap-1">
+                               <Mail size={10} className="text-red-400" />
+                               {(item as Customer).email}
+                             </span>
+                          </div>
+                        </td>
                         <td className="px-4 py-3 text-slate-500">
                           <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 text-[9px] font-bold text-slate-600 uppercase mr-2">
                             {(item as Customer).sex}
