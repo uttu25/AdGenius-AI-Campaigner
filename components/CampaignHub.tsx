@@ -1,10 +1,10 @@
 
 import React, { useState } from 'react';
 import { Play, Loader2, ShieldAlert, Users, Package, AlertCircle, MessageCircle, ShieldCheck, Clock, Link as LinkIcon, Building2, Send, Mail, Image as ImageIcon } from 'lucide-react';
-import { Customer, Product, CampaignStep, WhatsAppConfig, GmailConfig, CampaignRecord, User as UserType, DeliveryChannel } from '../types';
-import { generateAdCopy, generateProductImage, personalizeMessage } from '../services/geminiService';
-import { sendWhatsAppMessage } from '../services/whatsappService';
-import { sendEmailMessage } from '../services/gmailService';
+import { Customer, Product, CampaignStep, WhatsAppConfig, GmailConfig, CampaignRecord, User as UserType, DeliveryChannel } from '../types.ts';
+import { generateAdCopy, generateProductImage, personalizeMessage } from '../services/geminiService.ts';
+import { sendWhatsAppMessage } from '../services/whatsappService.ts';
+import { sendEmailMessage } from '../services/gmailService.ts';
 
 interface CampaignHubProps {
   customers: Customer[];

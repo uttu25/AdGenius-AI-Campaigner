@@ -1,19 +1,19 @@
 
 import React, { useState, useMemo } from 'react';
 import { LayoutDashboard, Users, Package, Settings, MessageSquarePlus, Megaphone, History, User, X, CheckCircle2, AlertCircle, ShieldCheck, Clock, MessageSquare, AlertTriangle, LogOut, UserMinus } from 'lucide-react';
-import { Customer, Product, FilterOptions, WhatsAppConfig, GmailConfig, CampaignRecord, User as UserType } from './types';
-import TemplateButtons from './components/TemplateButtons';
-import CSVImport from './components/CSVImport';
-import DataGrid from './components/DataGrid';
-import CampaignHub from './components/CampaignHub';
-import SegmentationFilter from './components/SegmentationFilter';
-import ProductFilter from './components/ProductFilter';
-import WhatsAppSettings from './components/WhatsAppSettings';
-import GmailSettings from './components/GmailSettings';
-import CampaignHistory from './components/CampaignHistory';
-import AuthPage from './components/AuthPage';
-import GeneralSettings from './components/GeneralSettings';
-import Feedback from './components/Feedback';
+import { Customer, Product, FilterOptions, WhatsAppConfig, GmailConfig, CampaignRecord, User as UserType } from './types.ts';
+import TemplateButtons from './components/TemplateButtons.tsx';
+import CSVImport from './components/CSVImport.tsx';
+import DataGrid from './components/DataGrid.tsx';
+import CampaignHub from './components/CampaignHub.tsx';
+import SegmentationFilter from './components/SegmentationFilter.tsx';
+import ProductFilter from './components/ProductFilter.tsx';
+import WhatsAppSettings from './components/WhatsAppSettings.tsx';
+import GmailSettings from './components/GmailSettings.tsx';
+import CampaignHistory from './components/CampaignHistory.tsx';
+import AuthPage from './components/AuthPage.tsx';
+import GeneralSettings from './components/GeneralSettings.tsx';
+import Feedback from './components/Feedback.tsx';
 
 type AppTab = 'dashboard' | 'customers' | 'products' | 'campaign' | 'history' | 'api-settings' | 'general-settings' | 'feedback';
 
