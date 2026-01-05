@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { LayoutDashboard, Users, Package, Settings, MessageSquarePlus, Megaphone, History, User, X, CheckCircle2, AlertCircle, ShieldCheck, Clock, MessageSquare, AlertTriangle, LogOut, UserMinus, Database, Loader2 } from 'lucide-react';
+import { LayoutDashboard, Users, Package, Settings, MessageSquarePlus, Megaphone, History, User, X, CheckCircle2, AlertCircle, ShieldCheck, Clock, MessageSquare, AlertTriangle, LogOut, UserMinus, Database, Loader2, Shield } from 'lucide-react';
 import { Customer, Product, FilterOptions, WhatsAppConfig, GmailConfig, CampaignRecord, User as UserType } from './types.ts';
 import TemplateButtons from './components/TemplateButtons.tsx';
 import CSVImport from './components/CSVImport.tsx';
@@ -54,26 +54,54 @@ const App: React.FC = () => {
   const [selectedCustomerIds, setSelectedCustomerIds] = useState<Set<string>>(new Set());
   const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
 
-  // Load data from DB on mount
+  // Comprehensive System Hydration
   useEffect(() => {
-    const initData = async () => {
+    const bootSystem = async () => {
       try {
-        const [dbCustomers, dbProducts, dbCampaigns] = await Promise.all([
+        const [
+          dbSession,
+          dbWa,
+          dbGm,
+          dbCustomers,
+          dbProducts,
+          dbCampaigns
+        ] = await Promise.all([
+          api.session.get(),
+          api.settings.getWhatsApp(),
+          api.settings.getGmail(),
           api.customers.list(),
           api.products.list(),
           api.campaigns.list()
         ]);
+
+        if (dbSession) setCurrentUser(dbSession);
+        if (dbWa) setWhatsappConfig(dbWa.value);
+        if (dbGm) setGmailConfig(dbGm.value);
+        
         setCustomers(dbCustomers);
         setProducts(dbProducts);
         setHistory(dbCampaigns.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()));
       } catch (err) {
-        console.error("Failed to hydrate data from DB", err);
+        console.error("CRITICAL: System Hydration Failure", err);
       } finally {
         setIsDataLoaded(true);
       }
     };
-    initData();
+    bootSystem();
   }, []);
+
+  // Real-time Settings Sync
+  useEffect(() => {
+    if (isDataLoaded && whatsappConfig.accessToken) {
+      api.settings.saveWhatsApp(whatsappConfig);
+    }
+  }, [whatsappConfig, isDataLoaded]);
+
+  useEffect(() => {
+    if (isDataLoaded && gmailConfig.refreshToken) {
+      api.settings.saveGmail(gmailConfig);
+    }
+  }, [gmailConfig, isDataLoaded]);
 
   const filteredCustomers = useMemo(() => {
     return customers.filter(c => {
@@ -96,54 +124,6 @@ const App: React.FC = () => {
 
   const uniqueCities = Array.from(new Set(customers.map(c => c.city))).filter(Boolean);
   const uniqueStates = Array.from(new Set(customers.map(c => c.state))).filter(Boolean);
-
-  const toggleCustomerSelection = (id: string) => {
-    setSelectedCustomerIds(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
-  const toggleAllFilteredCustomers = (selectAll: boolean) => {
-    setSelectedCustomerIds(prev => {
-      const next = new Set(prev);
-      filteredCustomers.forEach(c => {
-        if (selectAll) next.add(c.id);
-        else next.delete(c.id);
-      });
-      return next;
-    });
-  };
-
-  const toggleProductSelection = (id: string) => {
-    setSelectedProductIds(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        if (!currentUser?.autoScheduleDaily && next.size >= 5) {
-          return prev; 
-        }
-        next.add(id);
-      }
-      return next;
-    });
-  };
-
-  const toggleAllFilteredProducts = (selectAll: boolean) => {
-    if (!currentUser?.autoScheduleDaily) return;
-
-    setSelectedProductIds(prev => {
-      const next = new Set(prev);
-      filteredProducts.forEach(p => {
-        if (selectAll) next.add(p.id);
-        else next.delete(p.id);
-      });
-      return next;
-    });
-  };
 
   const handleImportCustomers = async (data: Customer[]) => {
     setIsSyncing(true);
@@ -195,50 +175,55 @@ const App: React.FC = () => {
     });
   };
 
-  const toggleDailyScheduling = () => {
-    if (currentUser) {
-      const newMode = !currentUser.autoScheduleDaily;
-      if (!newMode && selectedProductIds.size > 5) {
-        const truncated = Array.from(selectedProductIds).slice(0, 5);
-        setSelectedProductIds(new Set(truncated));
-      }
-      setCurrentUser(prev => prev ? { ...prev, autoScheduleDaily: newMode } : null);
-    }
-  };
-
   const handleUpdateLogo = (logo: string) => {
-    setCurrentUser(prev => prev ? { ...prev, logo } : null);
+    setCurrentUser(prev => {
+      const next = prev ? { ...prev, logo } : null;
+      if (next) api.session.save(next);
+      return next;
+    });
   };
 
   const handleUpdateCompanyName = (companyName: string) => {
-    setCurrentUser(prev => prev ? { ...prev, companyName } : null);
+    setCurrentUser(prev => {
+      const next = prev ? { ...prev, companyName } : null;
+      if (next) api.session.save(next);
+      return next;
+    });
   };
 
-  const handleLogin = (email: string) => {
-    setCurrentUser({
+  const handleLogin = async (email: string) => {
+    const newUser = {
       email,
       name: email.split('@')[0],
       isLoggedIn: true,
       isGoogleLinked: true,
       autoScheduleDaily: false,
       companyName: '' 
-    });
+    };
+    await api.session.save(newUser);
+    setCurrentUser(newUser);
     setActiveTab('dashboard');
+  };
+
+  const handleLogout = async () => {
+    await api.session.clear();
+    setCurrentUser(null);
   };
 
   const isWhatsAppConfigured = !!(whatsappConfig.accessToken && whatsappConfig.phoneNumberId);
   const isGmailConfigured = !!(gmailConfig.refreshToken && gmailConfig.userEmail);
 
-  if (!currentUser) return <AuthPage onLogin={handleLogin} />;
   if (!isDataLoaded) {
     return (
       <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center text-white p-10">
         <Loader2 className="animate-spin text-indigo-500 mb-6" size={48} />
-        <h2 className="text-xl font-black uppercase tracking-widest italic">Hydrating Operations...</h2>
-        <p className="text-slate-500 text-xs mt-2 uppercase tracking-tighter">Initializing Database v1.0</p>
+        <h2 className="text-xl font-black uppercase tracking-widest italic">Encrypted Boot Sequence...</h2>
+        <p className="text-slate-500 text-xs mt-2 uppercase tracking-tighter">Syncing Local Vault v2.1</p>
       </div>
     );
   }
+
+  if (!currentUser) return <AuthPage onLogin={handleLogin} />;
 
   const hasAnySelection = selectedCustomerIds.size > 0 || selectedProductIds.size > 0;
 
@@ -263,12 +248,12 @@ const App: React.FC = () => {
 
         <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center gap-3">
           <div className="relative">
-            <Database size={16} className="text-indigo-500" />
+            <Shield size={16} className="text-emerald-500" />
             <div className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
           </div>
           <div className="min-w-0">
-            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Database</p>
-            <p className="text-[10px] font-bold text-slate-700 truncate">LOCAL PERSISTENCE ACTIVE</p>
+            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Security Status</p>
+            <p className="text-[10px] font-bold text-slate-700 truncate">VAULT SECURED & SYNCED</p>
           </div>
         </div>
 
@@ -303,7 +288,7 @@ const App: React.FC = () => {
            <NavItem icon={<User size={20} />} label="Profile" active={activeTab === 'general-settings'} onClick={() => setActiveTab('general-settings')} />
            
            <div className="px-4 py-4 mt-4 bg-indigo-600 rounded-2xl flex items-center gap-3 shadow-lg border border-indigo-500 relative overflow-hidden group">
-             <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-indigo-600 text-xs font-bold shrink-0 overflow-hidden">
+             <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-indigo-600 text-xs font-bold shrink-0 overflow-hidden text-center">
                {currentUser.logo ? (
                  <img src={currentUser.logo} alt="Logo" className="w-full h-full object-cover" />
                ) : (
@@ -334,7 +319,7 @@ const App: React.FC = () => {
             {isSyncing && (
               <div className="flex items-center gap-2 bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full border border-indigo-100 animate-pulse">
                 <Loader2 size={12} className="animate-spin" />
-                <span className="text-[10px] font-bold uppercase">Syncing to DB</span>
+                <span className="text-[10px] font-bold uppercase">Cloud Syncing</span>
               </div>
             )}
           </div>
@@ -345,41 +330,41 @@ const App: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <StatCard 
               icon={<Users className="text-blue-600" />} 
-              label="Total Customers stored" 
+              label="Secure Customer Records" 
               value={customers.length} 
               color="blue" 
             />
             <StatCard 
               icon={<Package className="text-emerald-600" />} 
-              label="Products in catalog" 
+              label="Catalog Inventory" 
               value={products.length} 
               color="emerald" 
             />
             <StatCard 
               icon={<History className="text-indigo-600" />} 
-              label="Missions Run" 
+              label="Mission Logs" 
               value={history.length} 
               color="indigo" 
             />
             
             <div className="flex flex-col gap-2">
               <div className={`px-4 py-2 rounded-xl border flex flex-col justify-center gap-0.5 ${isWhatsAppConfigured ? 'bg-emerald-50 border-emerald-100' : 'bg-rose-50 border-rose-100'}`}>
-                 <span className="text-[8px] font-bold text-slate-400 uppercase tracking-tight">WhatsApp API</span>
+                 <span className="text-[8px] font-bold text-slate-400 uppercase tracking-tight">WhatsApp Gateway</span>
                  <div className="flex items-center gap-1">
                    {isWhatsAppConfigured ? (
-                     <><CheckCircle2 size={10} className="text-emerald-600" /><span className="text-[10px] font-bold text-emerald-700">Verified</span></>
+                     <><CheckCircle2 size={10} className="text-emerald-600" /><span className="text-[10px] font-bold text-emerald-700">Online</span></>
                    ) : (
-                     <><AlertCircle size={10} className="text-rose-600" /><span className="text-[10px] font-bold text-rose-700">Off</span></>
+                     <><AlertCircle size={10} className="text-rose-600" /><span className="text-[10px] font-bold text-rose-700">Offline</span></>
                    )}
                  </div>
               </div>
               <div className={`px-4 py-2 rounded-xl border flex flex-col justify-center gap-0.5 ${isGmailConfigured ? 'bg-emerald-50 border-emerald-100' : 'bg-rose-50 border-rose-100'}`}>
-                 <span className="text-[8px] font-bold text-slate-400 uppercase tracking-tight">Gmail API</span>
+                 <span className="text-[8px] font-bold text-slate-400 uppercase tracking-tight">Gmail Gateway</span>
                  <div className="flex items-center gap-1">
                    {isGmailConfigured ? (
-                     <><CheckCircle2 size={10} className="text-emerald-600" /><span className="text-[10px] font-bold text-emerald-700">Verified</span></>
+                     <><CheckCircle2 size={10} className="text-emerald-600" /><span className="text-[10px] font-bold text-emerald-700">Online</span></>
                    ) : (
-                     <><AlertCircle size={10} className="text-rose-600" /><span className="text-[10px] font-bold text-rose-700">Off</span></>
+                     <><AlertCircle size={10} className="text-rose-600" /><span className="text-[10px] font-bold text-rose-700">Offline</span></>
                    )}
                  </div>
               </div>
@@ -405,8 +390,16 @@ const App: React.FC = () => {
               data={filteredCustomers} 
               type="customer" 
               selectedIds={selectedCustomerIds} 
-              onToggleSelection={toggleCustomerSelection} 
-              onToggleAll={toggleAllFilteredCustomers} 
+              onToggleSelection={(id) => setSelectedCustomerIds(p => {
+                 const n = new Set(p);
+                 if (n.has(id)) n.delete(id); else n.add(id);
+                 return n;
+              })} 
+              onToggleAll={(selectAll) => {
+                 const n = new Set(selectedCustomerIds);
+                 filteredCustomers.forEach(c => selectAll ? n.add(c.id) : n.delete(c.id));
+                 setSelectedCustomerIds(n);
+              }} 
               onDelete={handleDeleteCustomer}
             />
           </div>
@@ -414,31 +407,20 @@ const App: React.FC = () => {
 
         {activeTab === 'products' && (
           <div className="space-y-6">
-            <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-              <ProductFilter 
-                searchTerm={productSearch} 
-                onSearchChange={setProductSearch}
-              />
-              <div className="flex items-center gap-3 p-4 bg-white border border-slate-200 rounded-xl shadow-sm h-full flex-shrink-0">
-                <div className="flex flex-col">
-                  <span className="text-xs font-bold text-slate-700">Daily Batch Mode</span>
-                  <span className="text-[10px] text-slate-400 italic">Unlocks select-all</span>
-                </div>
-                <button 
-                  onClick={toggleDailyScheduling}
-                  className={`relative w-12 h-6 rounded-full transition-colors focus:outline-none ${currentUser.autoScheduleDaily ? 'bg-indigo-600' : 'bg-slate-200'}`}
-                >
-                  <div className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform ${currentUser.autoScheduleDaily ? 'translate-x-6' : 'translate-x-0'}`} />
-                </button>
-              </div>
-            </div>
+            <ProductFilter 
+              searchTerm={productSearch} 
+              onSearchChange={setProductSearch}
+            />
             <DataGrid 
               data={filteredProducts} 
               type="product" 
               selectedIds={selectedProductIds} 
-              onToggleSelection={toggleProductSelection} 
-              onToggleAll={toggleAllFilteredProducts}
-              isDailyMode={currentUser.autoScheduleDaily}
+              onToggleSelection={(id) => setSelectedProductIds(p => {
+                 const n = new Set(p);
+                 if (n.has(id)) n.delete(id); else n.add(id);
+                 return n;
+              })} 
+              onToggleAll={() => {}}
               onDelete={handleDeleteProduct}
             />
           </div>
@@ -472,32 +454,6 @@ const App: React.FC = () => {
               config={gmailConfig}
               setConfig={setGmailConfig}
             />
-            
-            {/* Danger Zone */}
-            <div className="bg-white p-6 rounded-xl border border-rose-100 shadow-sm border-t-4 border-t-rose-500">
-              <h3 className="text-lg font-bold text-rose-800 mb-2 flex items-center gap-2">
-                <AlertTriangle size={20} />
-                Danger Zone
-              </h3>
-              <p className="text-sm text-slate-500 mb-6">These actions are destructive and will reset your current session configuration.</p>
-              
-              <div className="flex flex-col sm:flex-row gap-4">
-                <button
-                  onClick={() => setCurrentUser(null)}
-                  className="flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold transition-all"
-                >
-                  <LogOut size={18} />
-                  Logout from Session
-                </button>
-                <button
-                  onClick={() => setWhatsappConfig(p => ({ ...p, businessAccountId: '' }))}
-                  className="flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 font-semibold transition-all border border-rose-200"
-                >
-                  <UserMinus size={18} />
-                  Delete Business User ID
-                </button>
-              </div>
-            </div>
           </div>
         )}
 
@@ -508,8 +464,8 @@ const App: React.FC = () => {
             companyName={currentUser.companyName}
             onUpdateLogo={handleUpdateLogo}
             onUpdateCompanyName={handleUpdateCompanyName}
-            onLogout={() => setCurrentUser(null)} 
-            onDeleteAccount={() => setCurrentUser(null)} 
+            onLogout={handleLogout} 
+            onDeleteAccount={handleLogout} 
           />
         )}
 

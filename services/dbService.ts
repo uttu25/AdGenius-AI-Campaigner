@@ -1,18 +1,21 @@
 
-import { Customer, Product, CampaignRecord, User } from '../types';
+import { Customer, Product, CampaignRecord, User, WhatsAppConfig, GmailConfig } from '../types';
 
-const DB_NAME = 'AdGeniusDB';
-const DB_VERSION = 1;
+const DB_NAME = 'AdGeniusDB_v2';
+const DB_VERSION = 2;
 
 export class DatabaseService {
   private db: IDBDatabase | null = null;
 
   async init(): Promise<void> {
+    if (this.db) return;
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(DB_NAME, DB_VERSION);
 
       request.onupgradeneeded = (event) => {
         const db = (event.target as IDBOpenDBRequest).result;
+        
+        // Data Stores
         if (!db.objectStoreNames.contains('customers')) {
           db.createObjectStore('customers', { keyPath: 'id' });
         }
@@ -22,8 +25,13 @@ export class DatabaseService {
         if (!db.objectStoreNames.contains('campaigns')) {
           db.createObjectStore('campaigns', { keyPath: 'id' });
         }
+        
+        // System Stores
+        if (!db.objectStoreNames.contains('session')) {
+          db.createObjectStore('session', { keyPath: 'id' });
+        }
         if (!db.objectStoreNames.contains('settings')) {
-          db.createObjectStore('settings', { keyPath: 'email' });
+          db.createObjectStore('settings', { keyPath: 'key' });
         }
       };
 
@@ -51,13 +59,29 @@ export class DatabaseService {
     });
   }
 
+  async getOne<T>(storeName: string, id: string): Promise<T | null> {
+    const store = await this.getStore(storeName);
+    return new Promise((resolve, reject) => {
+      const request = store.get(id);
+      request.onsuccess = () => resolve(request.result || null);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async put(storeName: string, item: any): Promise<void> {
+    const store = await this.getStore(storeName, 'readwrite');
+    return new Promise((resolve, reject) => {
+      const request = store.put(item);
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
+
   async saveBatch<T>(storeName: string, items: T[]): Promise<void> {
     const db = this.db || (await this.init(), this.db!);
     const transaction = db.transaction(storeName, 'readwrite');
     const store = transaction.objectStore(storeName);
-    
     items.forEach(item => store.put(item));
-
     return new Promise((resolve, reject) => {
       transaction.oncomplete = () => resolve();
       transaction.onerror = () => reject(transaction.error);

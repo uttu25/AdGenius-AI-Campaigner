@@ -1,13 +1,19 @@
 
 import { db } from './dbService';
-import { Customer, Product, CampaignRecord } from '../types';
+import { Customer, Product, CampaignRecord, User, WhatsAppConfig, GmailConfig } from '../types';
 
-/**
- * Mock Backend API Service
- * In a production environment, these would be fetch('/api/...') calls.
- * This structure keeps the frontend "backend-ready".
- */
 export const api = {
+  session: {
+    get: () => db.getOne<User>('session', 'current'),
+    save: (user: User) => db.put('session', { ...user, id: 'current' }),
+    clear: () => db.delete('session', 'current')
+  },
+  settings: {
+    getWhatsApp: () => db.getOne<{ value: WhatsAppConfig }>('settings', 'whatsapp'),
+    saveWhatsApp: (config: WhatsAppConfig) => db.put('settings', { key: 'whatsapp', value: config }),
+    getGmail: () => db.getOne<{ value: GmailConfig }>('settings', 'gmail'),
+    saveGmail: (config: GmailConfig) => db.put('settings', { key: 'gmail', value: config })
+  },
   customers: {
     list: () => db.getAll<Customer>('customers'),
     saveBatch: (data: Customer[]) => db.saveBatch('customers', data),
