@@ -39,12 +39,12 @@ const App: React.FC = () => {
     ageRange: [0, 100],
     sex: [],
     city: '',
-    state: ''
+    state: '',
+    whatsappOptIn: '',
+    gmailOptIn: ''
   });
 
   const [productSearch, setProductSearch] = useState('');
-  const [productWhatsappFilter, setProductWhatsappFilter] = useState('');
-  const [productGmailFilter, setProductGmailFilter] = useState('');
 
   // Selection States
   const [selectedCustomerIds, setSelectedCustomerIds] = useState<Set<string>>(new Set());
@@ -56,18 +56,18 @@ const App: React.FC = () => {
       const sexMatch = filters.sex.length === 0 || filters.sex.includes(c.sex);
       const cityMatch = !filters.city || c.city === filters.city;
       const stateMatch = !filters.state || c.state === filters.state;
-      return ageMatch && sexMatch && cityMatch && stateMatch;
+      const whatsappMatch = !filters.whatsappOptIn || c.whatsapp_opt_in === filters.whatsappOptIn;
+      const gmailMatch = !filters.gmailOptIn || c.gmail_opt_in === filters.gmailOptIn;
+      return ageMatch && sexMatch && cityMatch && stateMatch && whatsappMatch && gmailMatch;
     });
   }, [customers, filters]);
 
   const filteredProducts = useMemo(() => {
     return products.filter(p => {
       const searchMatch = !productSearch.trim() || p.name.toLowerCase().includes(productSearch.toLowerCase());
-      const whatsappMatch = !productWhatsappFilter || p.whatsapp_opt_in === productWhatsappFilter;
-      const gmailMatch = !productGmailFilter || p.gmail_opt_in === productGmailFilter;
-      return searchMatch && whatsappMatch && gmailMatch;
+      return searchMatch;
     });
-  }, [products, productSearch, productWhatsappFilter, productGmailFilter]);
+  }, [products, productSearch]);
 
   const uniqueCities = Array.from(new Set(customers.map(c => c.city))).filter(Boolean);
   const uniqueStates = Array.from(new Set(customers.map(c => c.state))).filter(Boolean);
@@ -192,7 +192,7 @@ const App: React.FC = () => {
         <div className="flex items-center gap-3 text-indigo-600 px-2 overflow-hidden">
           <Megaphone size={32} className="shrink-0" />
           <div className="min-w-0">
-             <h1 className="text-xl font-black tracking-tighter uppercase italic">AdGenius <span className="text-slate-400 font-light not-italic">Pro</span></h1>
+             <h1 className="text-xl font-black tracking-tighter uppercase italic">AdGenius <span className="text-red-600 font-light not-italic">Pro</span></h1>
           </div>
         </div>
 
@@ -345,10 +345,6 @@ const App: React.FC = () => {
               <ProductFilter 
                 searchTerm={productSearch} 
                 onSearchChange={setProductSearch}
-                whatsappOptIn={productWhatsappFilter}
-                onWhatsappOptInChange={setProductWhatsappFilter}
-                gmailOptIn={productGmailFilter}
-                onGmailOptInChange={setProductGmailFilter}
               />
               <div className="flex items-center gap-3 p-4 bg-white border border-slate-200 rounded-xl shadow-sm h-full flex-shrink-0">
                 <div className="flex flex-col">

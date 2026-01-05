@@ -6,7 +6,7 @@ import { generateAdCopy, generateProductImage, personalizeMessage } from '../ser
 import { sendWhatsAppMessage } from '../services/whatsappService.ts';
 import { sendEmailMessage } from '../services/gmailService.ts';
 
-// Defined AIStudio interface to ensure identical property types across global declarations
+// Define the AIStudio interface to match existing environment types and resolve declaration conflicts on the window object.
 interface AIStudio {
   hasSelectedApiKey: () => Promise<boolean>;
   openSelectKey: () => Promise<void>;
@@ -14,7 +14,7 @@ interface AIStudio {
 
 declare global {
   interface Window {
-    aistudio: AIStudio;
+    aistudio?: AIStudio;
   }
 }
 
@@ -42,6 +42,7 @@ const CampaignHub: React.FC<CampaignHubProps> = ({ customers, products, whatsapp
 
   useEffect(() => {
     const checkKey = async () => {
+      // Accessing aistudio from window safely with the correct global augmentation
       if (window.aistudio && typeof window.aistudio.hasSelectedApiKey === 'function') {
         const hasKey = await window.aistudio.hasSelectedApiKey();
         setHasApiKey(hasKey);
@@ -51,8 +52,10 @@ const CampaignHub: React.FC<CampaignHubProps> = ({ customers, products, whatsapp
   }, []);
 
   const handleOpenSelectKey = async () => {
+    // Triggering the API key selection dialog provided by the environment
     if (window.aistudio && typeof window.aistudio.openSelectKey === 'function') {
       await window.aistudio.openSelectKey();
+      // Assume the key selection was successful to mitigate race conditions
       setHasApiKey(true);
     }
   };
@@ -62,6 +65,7 @@ const CampaignHub: React.FC<CampaignHubProps> = ({ customers, products, whatsapp
   };
 
   const startCampaign = async () => {
+    // Validate API key selection before initiating any generative AI tasks
     if (window.aistudio && typeof window.aistudio.hasSelectedApiKey === 'function') {
       const isKeySelected = await window.aistudio.hasSelectedApiKey();
       if (!isKeySelected) {
@@ -185,6 +189,7 @@ const CampaignHub: React.FC<CampaignHubProps> = ({ customers, products, whatsapp
       addLog('Manager', `ALL DELEGATED MISSIONS EXECUTED. Operations successful.`, 'completed');
 
     } catch (err: any) {
+      // Handle the case where the selected API key is invalid or lacks necessary permissions
       if (err.message && err.message.includes("Requested entity was not found")) {
         setHasApiKey(false);
         await handleOpenSelectKey();

@@ -81,6 +81,8 @@ const CSVImport: React.FC<CSVImportProps> = ({
             sex: (row[getIdx('sex')] as any) || 'Other',
             city: row[getIdx('city')] || '',
             state: row[getIdx('state')] || '',
+            whatsapp_opt_in: row[getIdx('whatsapp_opt_in')] || 'N',
+            gmail_opt_in: row[getIdx('gmail_opt_in')] || 'N',
           })).filter(c => c.name && c.mobile_number && c.email);
 
           onCustomerImport(customers);
@@ -104,8 +106,6 @@ const CSVImport: React.FC<CSVImportProps> = ({
             description: row[getIdx('product_description')] || '',
             price: row[getIdx('price')] || '',
             url: row[getIdx('product_url')] || '', 
-            whatsapp_opt_in: row[getIdx('whatsapp_opt_in')] || 'N',
-            gmail_opt_in: row[getIdx('gmail_opt_in')] || 'N',
           })).filter(p => p.name && p.description && p.price && p.url);
 
           onProductImport(products);

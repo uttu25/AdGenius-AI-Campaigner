@@ -8,6 +8,8 @@ export interface Customer {
   sex: 'Male' | 'Female' | 'Other';
   city: string;
   state: string;
+  whatsapp_opt_in?: string; // Moved from Product
+  gmail_opt_in?: string;    // Moved from Product
 }
 
 export interface Product {
@@ -18,8 +20,6 @@ export interface Product {
   url: string; // Mandatory product link
   image_url?: string;
   ad_copy?: string;
-  whatsapp_opt_in?: string; // Flag: Y/N
-  gmail_opt_in?: string;    // Flag: Y/N
 }
 
 export interface CampaignStep {
@@ -34,6 +34,8 @@ export interface FilterOptions {
   sex: string[];
   city: string;
   state: string;
+  whatsappOptIn: string; // Added here
+  gmailOptIn: string;    // Added here
 }
 
 export interface WhatsAppConfig {

@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { FilterOptions } from '../types';
-import { Filter } from 'lucide-react';
+import { Filter, MessageCircle, Mail } from 'lucide-react';
 
 interface SegmentationFilterProps {
   filters: FilterOptions;
@@ -25,9 +25,24 @@ const SegmentationFilter: React.FC<SegmentationFilterProps> = ({ filters, setFil
       <div className="flex items-center gap-2 mb-4">
         <Filter size={18} className="text-indigo-600" />
         <h2 className="text-md font-bold text-slate-800">Target Segmentation</h2>
+        {(filters.city || filters.state || filters.sex.length > 0 || filters.whatsappOptIn || filters.gmailOptIn) && (
+          <button 
+            onClick={() => setFilters({
+              ageRange: [0, 100],
+              sex: [],
+              city: '',
+              state: '',
+              whatsappOptIn: '',
+              gmailOptIn: ''
+            })}
+            className="ml-auto text-xs font-bold text-indigo-500 hover:text-indigo-700 underline"
+          >
+            Reset Filters
+          </button>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
         {/* Age Filter */}
         <div className="space-y-2">
           <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Age Range</label>
@@ -93,6 +108,39 @@ const SegmentationFilter: React.FC<SegmentationFilterProps> = ({ filters, setFil
           >
             <option value="">All States</option>
             {states.map(state => <option key={state} value={state}>{state}</option>)}
+          </select>
+        </div>
+
+        {/* Opt-in Filters */}
+        <div className="space-y-2">
+          <label className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+            <MessageCircle size={14} className="text-emerald-500" />
+            WhatsApp Opt-in
+          </label>
+          <select
+            value={filters.whatsappOptIn}
+            onChange={(e) => setFilters(prev => ({ ...prev, whatsappOptIn: e.target.value }))}
+            className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-lg bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 font-bold text-slate-700"
+          >
+            <option value="">All Recipient Status</option>
+            <option value="Y">Opt-in Only (Y)</option>
+            <option value="N">Non Opt-in (N)</option>
+          </select>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+            <Mail size={14} className="text-rose-500" />
+            Gmail Opt-in
+          </label>
+          <select
+            value={filters.gmailOptIn}
+            onChange={(e) => setFilters(prev => ({ ...prev, gmailOptIn: e.target.value }))}
+            className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-lg bg-slate-50 focus:outline-none focus:ring-2 focus:ring-rose-500/20 font-bold text-slate-700"
+          >
+            <option value="">All Recipient Status</option>
+            <option value="Y">Opt-in Only (Y)</option>
+            <option value="N">Non Opt-in (N)</option>
           </select>
         </div>
       </div>
