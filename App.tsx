@@ -1,6 +1,6 @@
 
-import React, { useState, useMemo } from 'react';
-import { LayoutDashboard, Users, Package, Settings, MessageSquarePlus, Megaphone, History, User, X, CheckCircle2, AlertCircle, ShieldCheck, Clock, MessageSquare, AlertTriangle, LogOut, UserMinus } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { LayoutDashboard, Users, Package, Settings, MessageSquarePlus, Megaphone, History, User, X, CheckCircle2, AlertCircle, ShieldCheck, Clock, MessageSquare, AlertTriangle, LogOut, UserMinus, Database, Loader2 } from 'lucide-react';
 import { Customer, Product, FilterOptions, WhatsAppConfig, GmailConfig, CampaignRecord, User as UserType } from './types.ts';
 import TemplateButtons from './components/TemplateButtons.tsx';
 import CSVImport from './components/CSVImport.tsx';
@@ -14,6 +14,7 @@ import CampaignHistory from './components/CampaignHistory.tsx';
 import AuthPage from './components/AuthPage.tsx';
 import GeneralSettings from './components/GeneralSettings.tsx';
 import Feedback from './components/Feedback.tsx';
+import { api } from './services/apiService.ts';
 
 type AppTab = 'dashboard' | 'customers' | 'products' | 'campaign' | 'history' | 'api-settings' | 'general-settings' | 'feedback';
 
@@ -23,6 +24,9 @@ const App: React.FC = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [history, setHistory] = useState<CampaignRecord[]>([]);
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+
   const [whatsappConfig, setWhatsappConfig] = useState<WhatsAppConfig>({
     accessToken: '',
     phoneNumberId: '',
@@ -49,6 +53,27 @@ const App: React.FC = () => {
   // Selection States
   const [selectedCustomerIds, setSelectedCustomerIds] = useState<Set<string>>(new Set());
   const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
+
+  // Load data from DB on mount
+  useEffect(() => {
+    const initData = async () => {
+      try {
+        const [dbCustomers, dbProducts, dbCampaigns] = await Promise.all([
+          api.customers.list(),
+          api.products.list(),
+          api.campaigns.list()
+        ]);
+        setCustomers(dbCustomers);
+        setProducts(dbProducts);
+        setHistory(dbCampaigns.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()));
+      } catch (err) {
+        console.error("Failed to hydrate data from DB", err);
+      } finally {
+        setIsDataLoaded(true);
+      }
+    };
+    initData();
+  }, []);
 
   const filteredCustomers = useMemo(() => {
     return customers.filter(c => {
@@ -120,17 +145,38 @@ const App: React.FC = () => {
     });
   };
 
-  const handleClearCustomers = () => {
+  const handleImportCustomers = async (data: Customer[]) => {
+    setIsSyncing(true);
+    await api.customers.saveBatch(data);
+    setCustomers(prev => [...prev, ...data]);
+    setIsSyncing(false);
+  };
+
+  const handleImportProducts = async (data: Product[]) => {
+    setIsSyncing(true);
+    await api.products.saveBatch(data);
+    setProducts(prev => [...prev, ...data]);
+    setIsSyncing(false);
+  };
+
+  const handleClearCustomers = async () => {
+    setIsSyncing(true);
+    await api.customers.clear();
     setCustomers([]);
     setSelectedCustomerIds(new Set());
+    setIsSyncing(false);
   };
 
-  const handleClearProducts = () => {
+  const handleClearProducts = async () => {
+    setIsSyncing(true);
+    await api.products.clear();
     setProducts([]);
     setSelectedProductIds(new Set());
+    setIsSyncing(false);
   };
 
-  const handleDeleteCustomer = (id: string) => {
+  const handleDeleteCustomer = async (id: string) => {
+    await api.customers.delete(id);
     setCustomers(prev => prev.filter(c => c.id !== id));
     setSelectedCustomerIds(prev => {
       const next = new Set(prev);
@@ -139,7 +185,8 @@ const App: React.FC = () => {
     });
   };
 
-  const handleDeleteProduct = (id: string) => {
+  const handleDeleteProduct = async (id: string) => {
+    await api.products.delete(id);
     setProducts(prev => prev.filter(p => p.id !== id));
     setSelectedProductIds(prev => {
       const next = new Set(prev);
@@ -183,6 +230,15 @@ const App: React.FC = () => {
   const isGmailConfigured = !!(gmailConfig.refreshToken && gmailConfig.userEmail);
 
   if (!currentUser) return <AuthPage onLogin={handleLogin} />;
+  if (!isDataLoaded) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center text-white p-10">
+        <Loader2 className="animate-spin text-indigo-500 mb-6" size={48} />
+        <h2 className="text-xl font-black uppercase tracking-widest italic">Hydrating Operations...</h2>
+        <p className="text-slate-500 text-xs mt-2 uppercase tracking-tighter">Initializing Database v1.0</p>
+      </div>
+    );
+  }
 
   const hasAnySelection = selectedCustomerIds.size > 0 || selectedProductIds.size > 0;
 
@@ -204,6 +260,17 @@ const App: React.FC = () => {
           <NavItem icon={<History size={20} />} label="Past Missions" active={activeTab === 'history'} onClick={() => setActiveTab('history')} />
           <NavItem icon={<MessageSquare size={20} />} label="Feedback" active={activeTab === 'feedback'} onClick={() => setActiveTab('feedback')} />
         </nav>
+
+        <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center gap-3">
+          <div className="relative">
+            <Database size={16} className="text-indigo-500" />
+            <div className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Database</p>
+            <p className="text-[10px] font-bold text-slate-700 truncate">LOCAL PERSISTENCE ACTIVE</p>
+          </div>
+        </div>
 
         {hasAnySelection && (
           <div className="p-4 bg-indigo-50 rounded-xl border border-indigo-100">
@@ -253,7 +320,7 @@ const App: React.FC = () => {
 
       <main className="flex-1 p-4 md:p-8 overflow-y-auto">
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-          <div>
+          <div className="flex items-center gap-4">
             <h2 className="text-2xl font-bold text-slate-800 tracking-tight">
               {activeTab === 'dashboard' && 'Operations Hub'}
               {activeTab === 'customers' && 'Customer Segments'}
@@ -264,6 +331,12 @@ const App: React.FC = () => {
               {activeTab === 'general-settings' && 'Enterprise Account'}
               {activeTab === 'feedback' && 'Support & Feedback'}
             </h2>
+            {isSyncing && (
+              <div className="flex items-center gap-2 bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full border border-indigo-100 animate-pulse">
+                <Loader2 size={12} className="animate-spin" />
+                <span className="text-[10px] font-bold uppercase">Syncing to DB</span>
+              </div>
+            )}
           </div>
           {(activeTab === 'dashboard' || activeTab === 'history') && <TemplateButtons />}
         </header>
@@ -272,14 +345,14 @@ const App: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <StatCard 
               icon={<Users className="text-blue-600" />} 
-              label="Customer records selected" 
-              value={selectedCustomerIds.size} 
+              label="Total Customers stored" 
+              value={customers.length} 
               color="blue" 
             />
             <StatCard 
               icon={<Package className="text-emerald-600" />} 
-              label="Number of products selected" 
-              value={selectedProductIds.size} 
+              label="Products in catalog" 
+              value={products.length} 
               color="emerald" 
             />
             <StatCard 
@@ -314,8 +387,8 @@ const App: React.FC = () => {
 
             <div className="col-span-1 md:col-span-2 lg:col-span-4 mt-4">
               <CSVImport 
-                onCustomerImport={(data) => setCustomers(prev => [...prev, ...data])} 
-                onProductImport={(data) => setProducts(prev => [...prev, ...data])} 
+                onCustomerImport={handleImportCustomers} 
+                onProductImport={handleImportProducts} 
                 onClearCustomers={handleClearCustomers}
                 onClearProducts={handleClearProducts}
                 currentCustomerCount={customers.length}
@@ -378,7 +451,12 @@ const App: React.FC = () => {
             whatsappConfig={whatsappConfig}
             gmailConfig={gmailConfig}
             currentUser={currentUser}
-            onCampaignFinished={(rec) => setHistory(prev => [rec, ...prev])}
+            onCampaignFinished={async (rec) => {
+              setIsSyncing(true);
+              await api.campaigns.save(rec);
+              setHistory(prev => [rec, ...prev]);
+              setIsSyncing(false);
+            }}
           />
         )}
 
