@@ -1,22 +1,13 @@
 
+import { Play, Loader2, ShieldAlert, Users, Package, AlertCircle, MessageCircle, ShieldCheck, Clock, Link as LinkIcon, Building2, Send, Mail, Image as ImageIcon, Key, Sparkles, Layout, CheckCircle2, ShieldX } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
-import { Play, Loader2, ShieldAlert, Users, Package, AlertCircle, MessageCircle, ShieldCheck, Clock, Link as LinkIcon, Building2, Send, Mail, Image as ImageIcon, Key, Sparkles, Layout, CheckCircle2 } from 'lucide-react';
-import { Customer, Product, CampaignStep, WhatsAppConfig, GmailConfig, CampaignRecord, User as UserType, DeliveryChannel } from '../types.ts';
 import { generateAdCopy, generateProductImage, personalizeMessage } from '../services/geminiService.ts';
-import { sendWhatsAppMessage } from '../services/whatsappService.ts';
 import { sendEmailMessage } from '../services/gmailService.ts';
+import { sendWhatsAppMessage } from '../services/whatsappService.ts';
+import { CampaignRecord, CampaignStep, Customer, DeliveryChannel, GmailConfig, Product, User as UserType, WhatsAppConfig } from '../types.ts';
 
-// Define the AIStudio interface to match existing environment types and resolve declaration conflicts on the window object.
-interface AIStudio {
-  hasSelectedApiKey: () => Promise<boolean>;
-  openSelectKey: () => Promise<void>;
-}
-
-declare global {
-  interface Window {
-    aistudio?: AIStudio;
-  }
-}
+// Removed local AIStudio interface and declare global Window extension to resolve type declaration conflicts.
+// The window.aistudio object is assumed to be provided by the global environment.
 
 interface CampaignHubProps {
   customers: Customer[];
@@ -42,9 +33,10 @@ const CampaignHub: React.FC<CampaignHubProps> = ({ customers, products, whatsapp
 
   useEffect(() => {
     const checkKey = async () => {
-      // Accessing aistudio from window safely with the correct global augmentation
-      if (window.aistudio && typeof window.aistudio.hasSelectedApiKey === 'function') {
-        const hasKey = await window.aistudio.hasSelectedApiKey();
+      // Accessing aistudio from window safely. Using type assertion to avoid missing property errors if global types are not loaded.
+      const aistudio = (window as any).aistudio;
+      if (aistudio && typeof aistudio.hasSelectedApiKey === 'function') {
+        const hasKey = await aistudio.hasSelectedApiKey();
         setHasApiKey(hasKey);
       }
     };
@@ -53,8 +45,9 @@ const CampaignHub: React.FC<CampaignHubProps> = ({ customers, products, whatsapp
 
   const handleOpenSelectKey = async () => {
     // Triggering the API key selection dialog provided by the environment
-    if (window.aistudio && typeof window.aistudio.openSelectKey === 'function') {
-      await window.aistudio.openSelectKey();
+    const aistudio = (window as any).aistudio;
+    if (aistudio && typeof aistudio.openSelectKey === 'function') {
+      await aistudio.openSelectKey();
       // Assume the key selection was successful to mitigate race conditions
       setHasApiKey(true);
     }
@@ -66,8 +59,9 @@ const CampaignHub: React.FC<CampaignHubProps> = ({ customers, products, whatsapp
 
   const startCampaign = async () => {
     // Validate API key selection before initiating any generative AI tasks
-    if (window.aistudio && typeof window.aistudio.hasSelectedApiKey === 'function') {
-      const isKeySelected = await window.aistudio.hasSelectedApiKey();
+    const aistudio = (window as any).aistudio;
+    if (aistudio && typeof aistudio.hasSelectedApiKey === 'function') {
+      const isKeySelected = await aistudio.hasSelectedApiKey();
       if (!isKeySelected) {
         await handleOpenSelectKey();
       }
@@ -140,11 +134,19 @@ const CampaignHub: React.FC<CampaignHubProps> = ({ customers, products, whatsapp
 
         let successCount = 0;
         let failureCount = 0;
+        let skipCount = 0;
         const errorsEncountered = new Set<string>();
 
         addLog(targetAgent, `Starting batch processing for ${targetList.length} recipients...`, 'processing');
 
         for (const customer of targetList) {
+          // PRODUCTION SAFETY: Double check opt-in status per channel inside the loop
+          const optInField = deliveryChannel === 'WhatsApp' ? customer.whatsapp_opt_in : customer.gmail_opt_in;
+          if (optInField !== 'Y') {
+            skipCount++;
+            continue; 
+          }
+
           const personalizedMsg = await personalizeMessage(adCopy, customer);
           let result;
           
@@ -165,6 +167,9 @@ const CampaignHub: React.FC<CampaignHubProps> = ({ customers, products, whatsapp
           await new Promise(r => setTimeout(r, 80)); 
         }
 
+        if (skipCount > 0) {
+          addLog(targetAgent, `POLICY COMPLIANCE: ${skipCount} records skipped (missing ${deliveryChannel} opt-in).`, 'completed');
+        }
         addLog(targetAgent, `Batch dispatch finalized. Success: ${successCount}, Failed: ${failureCount}.`, 'completed');
 
         onCampaignFinished({
