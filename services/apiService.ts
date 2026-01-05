@@ -1,7 +1,11 @@
 import { Customer, Product, CampaignRecord, User, WhatsAppConfig, GmailConfig } from '../types';
 import { db } from './dbService'; 
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+// OLD: const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+// NEW: Matches gmailService logic
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_URL = `${BASE_URL}/api`;
 
 export const api = {
   session: {
