@@ -1,4 +1,4 @@
-
+import mammoth from 'mammoth';
 import React, { useState, useMemo, useEffect } from 'react';
 import { LayoutDashboard, Users, Package, Settings, MessageSquarePlus, Megaphone, History, User, X, CheckCircle2, AlertCircle, ShieldCheck, Clock, MessageSquare, AlertTriangle, LogOut, UserMinus, Database, Loader2, Shield } from 'lucide-react';
 import { Customer, Product, FilterOptions, WhatsAppConfig, GmailConfig, CampaignRecord, User as UserType } from './types.ts';
